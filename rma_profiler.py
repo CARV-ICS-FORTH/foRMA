@@ -8,7 +8,7 @@ import fnmatch
 import numpy as np
 import collections
 
-def filter_calls_per_rank(rma_allranks, windows_per_node, total_exec_times):
+def filter_calls_per_rank():
 
 	
 	window_union = set().union(*windows_per_node)
@@ -159,7 +159,7 @@ def filter_calls_per_rank(rma_allranks, windows_per_node, total_exec_times):
 			print('No MPI_Accumulate instances for this rank.')
 
 
-def fence_summary(rma_allranks, windows_per_node):
+def fence_summary():
 	print('\n>>> Creating fence synch summary.\n')
 	#print(rma_allranks)
 
@@ -214,52 +214,68 @@ def fence_summary(rma_allranks, windows_per_node):
 			straggler_row, straggler_col = np.where(afences_per_window == max_in_columns[i])
 			print('Slowest: ' + str(round(max_in_columns[i], 3))  + ', rank '+  str(np.unique(straggler_row)))
 			print('Mean:\t' + str(round(fences_mean[i], 3)) + '\nStd dv:\t' + str(round(fences_std_dev[i], 3)) + '\nmedian:\t' + str(round(fences_median[i], 3)) 
-					+ '\n90%ile:\t' + str(round(fences_90p[i], 3)) + '\n95%ile:\t' + str(round(fences_95p[i], 3)) + '\n99%ile:\t' +  str(round(fences_99p[i], 3))+ '\n')
+					+ '\n90%ile:\t' + str(round(fences_90p[i], 3)) + '\n95%ile:\t' + str(round(fences_95p[i], 3)) + '\n99%ile:\t' +  str(round(fences_99p[i], 3)) + '\n')
 
 
 
-def find_epochs(rma_allranks, windows_per_node):
+def find_epochs():
 	print('Calculating MPI_Win_fence epochs...')
 
 	epochs_done = 0
 	current_epoch = []
 	current_index = []
+	current_fence_times = []
 	total_ranks = len(rma_allranks)
 	for i in range(total_ranks):
 		current_index.append(0)
-	for i in range(total_ranks):
 		current_epoch.append(0)
+		current_fence_times.append((0, 0))
 	print(current_index)
 
 	while epochs_done == 0:
+		if current_epoch[0] > 1:
+			print('>>> Statistics for epoch ' + str(current_epoch[0]-1))
+			print(current_fence_times)
+			min_arrival =  np.min(current_fence_times, axis=0)
+			first_rank = np.argmin(current_fence_times, axis=0)[0]
+			max_departure = np.max(current_fence_times, axis=0)
+			last_rank = np.argmax(current_fence_times, axis=0)[1]
+			print(f'First arrival at fence for epoch at: {round(min_arrival[0], 3)}, is rank {first_rank}.'+
+				f'\nLast exit from fence for epoch at: {round(max_departure[1], 3)}, is rank {last_rank}.')
+			print(f'Difference between first arrival - last exit for epoch: {round(max_departure[1]-min_arrival[0], 3)} us')
 		for rank, rma_calls in enumerate(rma_allranks): 	# i.e. for each rank
-			print('Rank is: ' + str(rank))
-			while current_index[rank] < len(rma_calls):
-				current_call = rma_calls[current_index[rank]]
-				if current_epoch[rank] > 0:
-					print('collecting statistics')
-				print('Working on call ' + str(current_index[rank]))
+			#print('Rank is: ' + str(rank))
+			while current_index[rank] < len(rma_calls): # i.e while there are still calls to be processed for this rank
+				current_call = rma_calls[current_index[rank]] # get current call data
+				#print('Working on call ' + str(current_index[rank]) +  ': ' + current_call[0])
+				#if current_epoch[rank] > 0: # have we started synchronizaton?
+					#print('Add call to statistics.')
 				if (current_call[0] == 'MPI_Win_fence'):
 					#print('MPI_Win_fence found!')
 					current_index[rank] += 1
 					current_epoch[rank] += 1
-					print('Starting epoch ' + str(current_epoch[rank]) + ' in rank ' + str(rank))
-					if rank == total_ranks-1:
-						print('printing statistics')
+					current_fence_times[rank] = [(current_call[3]-start_wall_times[rank])*1000000, (current_call[4]-start_wall_times[rank])*1000000]
+					#print('Starting epoch ' + str(current_epoch[rank]) + ' in rank ' + str(rank))
 					break
 				current_index[rank] += 1
-			if (rank == 0):
+			# here, all calls of an epoch of a rank have been processed
+			if (rank == total_ranks-1):
 				#print(current_index[rank])
 				if current_index[rank] == len(rma_calls):
 					epochs_done = 1
+		# here, all ranks are at the same synchronization phase
+
 			
 
 
 
 
 def parse_trace():
-	# Get the arguments from the command-line except the filename
-	argv = sys.argv[1:]
+
+	global rma_allranks
+	global windows_per_node
+	global total_exec_times
+	global start_wall_times
 
 	#print('Number of arguments: {}'.format(len(argv)))
 	#print('Argument(s) passed: {}'.format(str(argv)))
@@ -271,28 +287,6 @@ def parse_trace():
 
 
 
-	# from https://www.datacamp.com/community/tutorials/argument-parsing-in-python
-
-	try: 
-		if len(argv) < 4:
-			print ('usage: ' + str(sys.argv[0]) + ' -d <directory name> -t <timestamp>')
-			sys.exit(2)
-		else:
-			opts, args = getopt.getopt(argv, 'd:t:')
-			for o, a in opts:
-				if o == "-d": 
-					dirname = a
-				elif o == "-t":
-					timestamp = a
-				else: 
-					assert False, "No such command-line option!"
-					sys.exit(2)
-			#print('Directory name is : ' + format(str(dirname)))
-			#print('Timestamp is : ' + format(str(timestamp)))
-			
-	except getopt.GetoptError:
-		print ('Exception: wrong usage. Use  ' + str(sys.argv[0]) + ' -d <directory name> -t <timestamp> instead')
-		sys.exit(2)
 
 	ordered_files = sorted(os.listdir(format(str(dirname))))
 	current_call = ''
@@ -317,6 +311,7 @@ def parse_trace():
 	start_times = []
 	end_times = []
 	total_exec_times = []
+	start_wall_times = []
 
 	#for filename in os.listdir(format(str(dirname))):
 	for filename in ordered_files:
@@ -342,9 +337,12 @@ def parse_trace():
 			line = line.strip()
 			linesplit = re.split(' |, ', line)
 
-			start_time = linesplit[4]
+			start_time = float(linesplit[6])
 
-			start_times.append(linesplit[4])
+			start_times.append(start_time)
+
+			start_wall_times.append(float(linesplit[4]))
+
 			#print(start_times)
 			file.seek(0)
 
@@ -359,7 +357,7 @@ def parse_trace():
 						current_call = linesplit[0]
 						call_count += 1
 						#print(current_call+' entering at wall time '+linesplit[4])
-						start_wall_time = linesplit[4]
+						start_wall_time = float(linesplit[4])
 						#print('CPU time is '+linesplit[6])
 						start_cpu_time = linesplit[6]
 
@@ -367,10 +365,10 @@ def parse_trace():
 					if linesplit[1] == 'returning':
 						monitoring_call = 0
 						#print(current_call+' returning at wall time '+linesplit[4])
-						end_wall_time = linesplit[4]
+						end_wall_time = float(linesplit[4])
 						#print('CPU time is '+linesplit[6])
 						end_cpu_time = linesplit[6]
-						current_duration_wall = ( float(end_wall_time) - float(start_wall_time)) * 1000000
+						current_duration_wall = (end_wall_time - start_wall_time) * 1000000
 						current_duration_cpu = ( float(end_cpu_time) - float(start_cpu_time) ) * 1000000
 
 						if current_call == 'MPI_Win_fence': 
@@ -403,11 +401,11 @@ def parse_trace():
 					elif 'targetrank' in linesplit[1]:
 						current_target = int((linesplit[1].split('='))[1])
 			
-			end_time = linesplit[4]
-			end_times.append(linesplit[4])
+			end_time = float(linesplit[6])
+			end_times.append(end_time)
 			#print(end_times)
 
-			exec_time = float(end_time) - float(start_time)
+			exec_time = (end_time - start_time) * 1000000
 			total_exec_times.append(exec_time)
 			#print(total_exec_times)
 			
@@ -426,12 +424,78 @@ def parse_trace():
 
 	#filter_calls_per_rank(rma_allranks, windows_per_node, total_exec_times)
 	#fence_summary(rma_allranks, windows_per_node)
-	find_epochs(rma_allranks, windows_per_node)
+
 
 
 
 def main():
+
+	global dirname, timestamp
+
+	action = 'r'
+	cmdlnaction = False
+
+
+	# Get the arguments from the command-line except the filename
+	argv = sys.argv[1:]
+
+	# from https://www.datacamp.com/community/tutorials/argument-parsing-in-python
+
+	try: 
+		if len(argv) < 4 or len(argv) > 6:
+			print ('usage: ' + str(sys.argv[0]) + ' -d <directory name> -t <timestamp> [ -a <action> ]')
+			sys.exit(2)
+		else:
+			opts, args = getopt.getopt(argv, 'd:t:a:')
+			for o, a in opts:
+				if o == "-d": 
+					dirname = a
+				elif o == "-t":
+					timestamp = a
+				elif o == "-a":
+					action = a
+					cmdlnaction = True
+				else: 
+					assert False, "No such command-line option!"
+					sys.exit(2)
+			#print('Directory name is : ' + format(str(dirname)))
+			#print('Timestamp is : ' + format(str(timestamp)))
+			
+	except getopt.GetoptError:
+		print ('Exception: wrong usage. Use  ' + str(sys.argv[0]) + ' -d <directory name> -t <timestamp> [ -a <action> ] instead')
+		sys.exit()
+
+
 	parse_trace()
+
+	while action != 'q':
+		if (not cmdlnaction):
+			if action == 'r':
+				print('--------------------------------------------\n- Options -\n' + 
+				'\te: Statistics per epoch (fence-based synchronization)\n' + 
+				'\tf: Fence statistics\n' + 
+				'\tc: Time spent in calls (per rank)\n' + 
+				'\tr: Reprint options\n' + 
+				'\tq: Quit\n')
+			action = input('Please select action: ')
+
+		if action == 'q':
+			sys.exit()
+		elif action == 'e': #
+			find_epochs()
+		elif action == 'f':
+			fence_summary()
+		elif action == 'c':
+			filter_calls_per_rank()
+		elif action == 'r':
+			pass
+		else:
+			print('Invalid action option!')
+			action = 'r'
+
+		if cmdlnaction:
+			sys.exit()
+
 	
 
 
