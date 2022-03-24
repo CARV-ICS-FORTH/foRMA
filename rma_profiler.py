@@ -228,8 +228,8 @@ def find_epochs():
 
 	total_ranks = len(rma_allranks)
 
-	call_indexes_for_epoch = []
-	call_indexes_for_rank_for_epoch = []
+	calls_of_rank_per_epoch = []
+	calls_of_epoch = []
 
 	for i in range(total_ranks):
 		current_index.append(0)
@@ -271,16 +271,47 @@ def find_epochs():
 				bytes_per_epoch[i-1] = 0
 
 			# calculate data transfer durations for last epoch
-			print('\nData transfer completion times for epoch:')
-			for rank, indexes in enumerate(call_indexes_for_epoch):
-				for index in indexes:
-					print(f'\tCall is: {rma_allranks[i][index][0]}. DT Duration: {round(current_fence_times[rank][1]-(rma_allranks[i][index][3]), 3)} us')
+			# print(f'\nData transfer completion times for epoch: {calls_of_epoch}')
+			dt_bounds_epoch = []
+			for rank, calls_per_rank in enumerate(calls_of_epoch):
+				dt_bounds_rank = []
+				for call in calls_per_rank:
+					dt_bound = current_fence_times[rank][1]-call[1]
+					print(f'\tRank is {rank} - Call op is: {call[0]}, dt upper bound is {round(dt_bound, 3)} us.')
+					dt_bounds_rank.append(dt_bound)
+				#print(dt_bounds_rank)
+				dt_bounds_epoch.append(dt_bounds_rank)
+
+			#print(dt_bounds_epoch)
+
+			if len(dt_bounds_epoch) != 0:
+				#print('Total time spent in MPI_Get: ' + str(round(get_total, 3)))
+				#print('(% of total exec time: ' + str(round((get_total/total_exec_times[i])*100, 3)) + '%)')
+				#print('Total MPI_Get observations processed: ' + str(len(get_op_durations_per_rank)))
+				#get_avg = get_total/len(get_op_durations_per_rank)
+				#dt_min = min(dt_bounds_epoch)
+				#dt_max = max(dt_bounds_epoch)
+				dt_min = np.min(dt_bounds_epoch)
+				min_rank, min_op, = np.where(dt_bounds_epoch == dt_min) 
+				dt_max = np.max(dt_bounds_epoch)
+				max_rank , max_op, = np.where(dt_bounds_epoch == dt_max) 
+
+				print(f'Min \t\t\t| Max\n{round(dt_min, 3)} (rank {min_rank})\t| {round(dt_max, 3)} (rank {max_rank})')
+				#print(str(round(get_avg, 3)) + ' \t| ' 
+				#	+ str(round(get_min, 3)) + ' \t| ' 
+				#	+ str(round(get_max, 3)) + '\n' )
+				#print('Std dv: ' + str(round(np.std(get_op_durations_per_rank), 3)) + ' | Median: ' +  str(round(np.median(get_op_durations_per_rank), 3)) 
+				#		+ ' |\n90%ile: ' + str(round(np.percentile(get_op_durations_per_rank, 90), 3)) 
+				#		+ ' | 95%ile: '  + str(round(np.percentile(get_op_durations_per_rank, 95), 3)) 
+				#		+ ' | 99%ile: '  + str(round(np.percentile(get_op_durations_per_rank, 99), 3)) + '\n')
+			else:
+				print('No data transfers for this epoch.')
 
 
 		for rank, rma_calls in enumerate(rma_allranks): 	# i.e. for each rank
 			#print('Rank is: ' + str(rank))
 
-			call_indexes_for_rank_for_epoch = []
+			calls_of_rank_per_epoch = []
 
 			while current_index[rank] < len(rma_calls): # i.e while there are still calls to be processed for this rank
 				current_call = rma_calls[current_index[rank]] # get current call data
@@ -299,7 +330,7 @@ def find_epochs():
 						#print(f'Call is {current_call[0]}. Bytes transferred in call: {current_call[5]}, Window is {current_call[2]}')
 						bytes_per_epoch[current_call[2]-1] += current_call[5]
 						#print(f'index of current call is {current_index[rank]}, rank is {rank}')
-						call_indexes_for_rank_for_epoch.append(current_index[rank])
+						calls_of_rank_per_epoch.append((current_call[0], current_call[3]-wall_time_biases[rank]))
 				current_index[rank] += 1
 			# here, all calls of an epoch of a rank have been processed
 			if (rank == total_ranks-1):
@@ -308,12 +339,13 @@ def find_epochs():
 					epochs_done = 1
 
 			#if call_indexes_for_rank_for_epoch != []:
-			if len(call_indexes_for_epoch) < rank+1:
-				call_indexes_for_epoch.append(call_indexes_for_rank_for_epoch)
+			# print(f'Rank is {rank}, calls collected for epoch: {calls_of_rank_per_epoch}.')
+			if len(calls_of_epoch) < rank+1:
+				calls_of_epoch.append(calls_of_rank_per_epoch)
 			else:
-				call_indexes_for_epoch[rank] = call_indexes_for_rank_for_epoch
+				calls_of_epoch[rank] = calls_of_rank_per_epoch
 					#print(f'length of call_indexes_for_epoch is {len(call_indexes_for_epoch)}')
-		#print(f'call indexes for epoch {current_epoch[rank]-1} are {call_indexes_for_epoch}')
+		# print(f'Calls for epoch {current_epoch[rank]-1} are {calls_of_epoch}')
 		# here, all ranks are at the same synchronization phase
 
 			
