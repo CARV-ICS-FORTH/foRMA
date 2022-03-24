@@ -93,7 +93,7 @@ def filter_calls_per_rank():
 		acc_op_durations_per_op = collections.defaultdict(list)
 		for acc_op in acc_ops_per_rank:
 			acc_op_durations_per_rank.append(acc_op[1])
-			acc_op_durations_per_op[acc_op[5]].append(acc_op[1])
+			acc_op_durations_per_op[acc_op[7]].append(acc_op[1])
 		if len(acc_op_durations_per_rank) != 0:
 			acc_op_durations.append(acc_op_durations_per_rank)
 		#print('Put durations: ' + str(put_op_durations_per_rank))
@@ -154,7 +154,7 @@ def filter_calls_per_rank():
 				+ str(round(acc_max, 3)) + '\n' )
 			for acc_optype in acc_op_durations_per_op: 
 				print('Total time spent in MPI_Accumulate with ' + acc_optype + ' as reduce operation: ' 
-						+ str(round(sum(acc_op_durations_per_op[acc_op[5]]), 3)))
+						+ str(round(sum(acc_op_durations_per_op[acc_op[7]]), 3)))
 		else:
 			print('No MPI_Accumulate instances for this rank.')
 
@@ -163,7 +163,7 @@ def fence_summary():
 	print('\n>>> Creating fence synch summary.\n')
 	#print(rma_allranks)
 
-	window_union = set().union(*windows_per_node)
+	#window_union = set().union(*windows_per_node)
 	#print(window_union)
 
 	for i in window_union:
@@ -219,50 +219,101 @@ def fence_summary():
 
 
 def find_epochs():
-	print('Calculating MPI_Win_fence epochs...')
+	print('Calculating MPI_Win_fence epochs...\n')
 
 	epochs_done = 0
 	current_epoch = []
 	current_index = []
 	current_fence_times = []
+
 	total_ranks = len(rma_allranks)
+
+	call_indexes_for_epoch = []
+	call_indexes_for_rank_for_epoch = []
+
 	for i in range(total_ranks):
 		current_index.append(0)
 		current_epoch.append(0)
 		current_fence_times.append((0, 0))
-	print(current_index)
+		#call_indexes_for_epoch.append([])
+	#print(current_index)
+
+	# first off, negotiate init time differences between ranks
+	base_wall_time = np.min(start_wall_times)
+	#print(base_wall_time)
+	wall_time_biases = [x - base_wall_time for x in start_wall_times]
+	#print(wall_time_biases)
+
+	bytes_per_epoch = []
+	for i in range(len(window_union)):
+		bytes_per_epoch.append(0)
+	#print(bytes_per_epoch)
+
 
 	while epochs_done == 0:
+
 		if current_epoch[0] > 1:
-			print('>>> Statistics for epoch ' + str(current_epoch[0]-1))
-			print(current_fence_times)
+			print('>>> Statistics for epoch ' + str(current_epoch[0]-1) + '\n')
+			
+			# print(f'Current fence times are: {current_fence_times}')
 			min_arrival =  np.min(current_fence_times, axis=0)
 			first_rank = np.argmin(current_fence_times, axis=0)[0]
 			max_departure = np.max(current_fence_times, axis=0)
 			last_rank = np.argmax(current_fence_times, axis=0)[1]
-			print(f'First arrival at fence for epoch at: {round(min_arrival[0], 3)}, is rank {first_rank}.'+
-				f'\nLast exit from fence for epoch at: {round(max_departure[1], 3)}, is rank {last_rank}.')
-			print(f'Difference between first arrival - last exit for epoch: {round(max_departure[1]-min_arrival[0], 3)} us')
+
+			print(f'First arrival at fence for epoch at: \t{round(min_arrival[0], 3)} wall clock time, is rank {first_rank}.'+
+				f'\nLast exit from fence for epoch at: \t{round(max_departure[1], 3)} wall clock time, is rank {last_rank}.\n')
+			print(f'Difference between first arrival - last exit for epoch: {round(max_departure[1]-min_arrival[0], 3)} us\n')
+
+			print('Bytes moved for epoch:')
+			for i in window_union:
+				print(f'\tWindow {i}: {bytes_per_epoch[i-1]} bytes total.')
+				bytes_per_epoch[i-1] = 0
+
+			# calculate data transfer durations for last epoch
+			print('\nData transfer completion times for epoch:')
+			for rank, indexes in enumerate(call_indexes_for_epoch):
+				for index in indexes:
+					print(f'\tCall is: {rma_allranks[i][index][0]}. DT Duration: {round(current_fence_times[rank][1]-(rma_allranks[i][index][3]), 3)} us')
+
+
 		for rank, rma_calls in enumerate(rma_allranks): 	# i.e. for each rank
 			#print('Rank is: ' + str(rank))
+
+			call_indexes_for_rank_for_epoch = []
+
 			while current_index[rank] < len(rma_calls): # i.e while there are still calls to be processed for this rank
 				current_call = rma_calls[current_index[rank]] # get current call data
 				#print('Working on call ' + str(current_index[rank]) +  ': ' + current_call[0])
-				#if current_epoch[rank] > 0: # have we started synchronizaton?
-					#print('Add call to statistics.')
+				
 				if (current_call[0] == 'MPI_Win_fence'):
 					#print('MPI_Win_fence found!')
 					current_index[rank] += 1
 					current_epoch[rank] += 1
-					current_fence_times[rank] = [(current_call[3]-start_wall_times[rank])*1000000, (current_call[4]-start_wall_times[rank])*1000000]
+					#current_fence_times[rank] = [(current_call[3]-start_wall_times[rank])*1000000, (current_call[4]-start_wall_times[rank])*1000000]
+					current_fence_times[rank] = [(current_call[3]-wall_time_biases[rank]), (current_call[4]-wall_time_biases[rank])]
 					#print('Starting epoch ' + str(current_epoch[rank]) + ' in rank ' + str(rank))
 					break
+				elif (current_call[0] not in {'MPI_Win_create', 'MPI_Win_free'}) :
+					if current_epoch[rank] > 0: # have we started synchronizaton?
+						#print(f'Call is {current_call[0]}. Bytes transferred in call: {current_call[5]}, Window is {current_call[2]}')
+						bytes_per_epoch[current_call[2]-1] += current_call[5]
+						#print(f'index of current call is {current_index[rank]}, rank is {rank}')
+						call_indexes_for_rank_for_epoch.append(current_index[rank])
 				current_index[rank] += 1
 			# here, all calls of an epoch of a rank have been processed
 			if (rank == total_ranks-1):
 				#print(current_index[rank])
 				if current_index[rank] == len(rma_calls):
 					epochs_done = 1
+
+			#if call_indexes_for_rank_for_epoch != []:
+			if len(call_indexes_for_epoch) < rank+1:
+				call_indexes_for_epoch.append(call_indexes_for_rank_for_epoch)
+			else:
+				call_indexes_for_epoch[rank] = call_indexes_for_rank_for_epoch
+					#print(f'length of call_indexes_for_epoch is {len(call_indexes_for_epoch)}')
+		#print(f'call indexes for epoch {current_epoch[rank]-1} are {call_indexes_for_epoch}')
 		# here, all ranks are at the same synchronization phase
 
 			
@@ -276,6 +327,7 @@ def parse_trace():
 	global windows_per_node
 	global total_exec_times
 	global start_wall_times
+	global window_union
 
 	#print('Number of arguments: {}'.format(len(argv)))
 	#print('Argument(s) passed: {}'.format(str(argv)))
@@ -337,11 +389,11 @@ def parse_trace():
 			line = line.strip()
 			linesplit = re.split(' |, ', line)
 
-			start_time = float(linesplit[6])
+			start_time = float(linesplit[6]) * 1000000 # convert to usec right away
 
 			start_times.append(start_time)
 
-			start_wall_times.append(float(linesplit[4]))
+			start_wall_times.append(float(linesplit[4])*1000000)
 
 			#print(start_times)
 			file.seek(0)
@@ -357,26 +409,26 @@ def parse_trace():
 						current_call = linesplit[0]
 						call_count += 1
 						#print(current_call+' entering at wall time '+linesplit[4])
-						start_wall_time = float(linesplit[4])
+						start_wall_time = float(linesplit[4]) * 1000000 # convert to usec right away
 						#print('CPU time is '+linesplit[6])
-						start_cpu_time = linesplit[6]
+						start_cpu_time = float(linesplit[6]) * 1000000 # convert to usec right away
 
 				elif monitoring_call == 1:
 					if linesplit[1] == 'returning':
 						monitoring_call = 0
 						#print(current_call+' returning at wall time '+linesplit[4])
-						end_wall_time = float(linesplit[4])
+						end_wall_time = float(linesplit[4]) * 1000000 # convert to usec right away
 						#print('CPU time is '+linesplit[6])
-						end_cpu_time = linesplit[6]
-						current_duration_wall = (end_wall_time - start_wall_time) * 1000000
-						current_duration_cpu = ( float(end_cpu_time) - float(start_cpu_time) ) * 1000000
+						end_cpu_time = float(linesplit[6]) * 1000000 # convert to usec right away
+						current_duration_wall = end_wall_time - start_wall_time
+						current_duration_cpu = end_cpu_time - start_cpu_time
 
 						if current_call == 'MPI_Win_fence': 
 							opdata = (current_call, current_duration_cpu, current_window, start_wall_time, end_wall_time)
 						elif current_call == 'MPI_Accumulate':
-							opdata = (current_call, current_duration_cpu, current_window, current_size, current_target, current_op, start_wall_time, end_wall_time)
+							opdata = (current_call, current_duration_cpu, current_window, start_wall_time, end_wall_time, current_size, current_target, current_op)
 						else: 
-							opdata = (current_call, current_duration_cpu, current_window, current_size, current_target, start_wall_time, end_wall_time)
+							opdata = (current_call, current_duration_cpu, current_window, start_wall_time, end_wall_time, current_size, current_target)
 
 						rma_node_timeseries.append(opdata)
 					elif 'win' in linesplit[1]: 
@@ -401,11 +453,11 @@ def parse_trace():
 					elif 'targetrank' in linesplit[1]:
 						current_target = int((linesplit[1].split('='))[1])
 			
-			end_time = float(linesplit[6])
+			end_time = float(linesplit[6]) * 1000000 # convert to usec right away
 			end_times.append(end_time)
 			#print(end_times)
 
-			exec_time = (end_time - start_time) * 1000000
+			exec_time = end_time - start_time
 			total_exec_times.append(exec_time)
 			#print(total_exec_times)
 			
@@ -415,12 +467,13 @@ def parse_trace():
 
 			calls_per_node.append(call_count)
 			windows_per_node.append(windows)
-			wincount_per_node.append(win_count)
+			#wincount_per_node.append(win_count)
 			rma_allranks.append(rma_node_timeseries)
 			file.close()
 			os.system('rm d2atemp.out')
 	#		print(rma_node_timeseries)
 
+	window_union = set().union(*windows_per_node)
 
 	#filter_calls_per_rank(rma_allranks, windows_per_node, total_exec_times)
 	#fence_summary(rma_allranks, windows_per_node)
