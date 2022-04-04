@@ -8,6 +8,8 @@ import fnmatch
 import numpy as np
 import collections
 
+import matplotlib.pyplot as plt
+
 def filter_calls_per_rank():
 
 	
@@ -142,6 +144,9 @@ def filter_calls_per_rank():
 		else:
 			print('No MPI_Put instances for this rank.')
 
+
+		print(f'SHAPE of op duration lists: {np.shape(acc_op_durations_per_rank)}')
+
 		if (len(acc_op_durations_per_rank) != 0) :
 			print('Total time spent in MPI_Accumulate: ' + str(round(acc_total, 3)))
 			print('Total MPI_Accumulate instances: ' + str(len(acc_op_durations_per_rank)))
@@ -201,6 +206,9 @@ def fence_summary():
 			+ str(round(win_max, 3)) + ' (' + str(int(max_rank)) + ', ' +  str(int(max_fence_id)) + ')\n')
 
 		print('Statistics per fence instance:\n')
+
+		print(f'SHAPE of fence durations: {np.shape(afences_per_window)}')
+
 		columns = afences_per_window.shape[1]
 		max_in_columns = np.max(afences_per_window, axis=0)
 		fences_mean = np.mean(afences_per_window, axis=0)
@@ -249,6 +257,8 @@ def find_epochs():
 		bytes_per_epoch.append(0)
 	#print(bytes_per_epoch)
 
+	epoch_statistics = []
+
 
 	while epochs_done == 0:
 
@@ -257,55 +267,68 @@ def find_epochs():
 			
 			# print(f'Current fence times are: {current_fence_times}')
 			min_arrival =  np.min(current_fence_times, axis=0)
+			max_arrival = np.max(current_fence_times, axis=0)
 			first_rank = np.argmin(current_fence_times, axis=0)[0]
 			max_departure = np.max(current_fence_times, axis=0)
 			last_rank = np.argmax(current_fence_times, axis=0)[1]
 
-			print(f'First arrival at fence for epoch at: \t{round(min_arrival[0], 3)} wall clock time, is rank {first_rank}.'+
-				f'\nLast exit from fence for epoch at: \t{round(max_departure[1], 3)} wall clock time, is rank {last_rank}.\n')
-			print(f'Difference between first arrival - last exit for epoch: {round(max_departure[1]-min_arrival[0], 3)} us\n')
+			#print(f'First arrival at fence for epoch at: \t{round(min_arrival[0], 3)} wall clock time, is rank {first_rank}.'+
+			#	f'\nLast exit from fence for epoch at: \t{round(max_departure[1], 3)} wall clock time, is rank {last_rank}.\n')
+			#print(f'Difference between first arrival - last exit for epoch: {round(max_departure[1]-min_arrival[0], 3)} us\n')
 
-			print('Bytes moved for epoch:')
-			for i in window_union:
-				print(f'\tWindow {i}: {bytes_per_epoch[i-1]} bytes total.')
-				bytes_per_epoch[i-1] = 0
+			arrival_order = np.argsort(current_fence_times, axis=0)
+			#print(f'Rank arrival at fence:\n( <arival order>, [first, last], range)\n{arrival_order[:,0]}, [{round(min_arrival[0], 3)}, {round(max_arrival[0], 3)}], {round(max_arrival[0]-min_arrival[0], 3)} us \n')
+
+			#print('Bytes moved for epoch:')
+			#for i in window_union:
+			#	print(f'\tWindow {i}: {bytes_per_epoch[i-1]} bytes total.')
+			#	bytes_per_epoch[i-1] = 0
 
 			# calculate data transfer durations for last epoch
-			# print(f'\nData transfer completion times for epoch: {calls_of_epoch}')
+			#print(f'\nData transfer completion times for epoch:')
 			dt_bounds_epoch = []
 			for rank, calls_per_rank in enumerate(calls_of_epoch):
 				dt_bounds_rank = []
 				for call in calls_per_rank:
 					dt_bound = current_fence_times[rank][1]-call[1]
-					print(f'\tRank is {rank} - Call op is: {call[0]}, dt upper bound is {round(dt_bound, 3)} us.')
+					#print(f'\tRank is {rank} - Call op is: {call[0]}, dt upper bound is {round(dt_bound, 3)} us.')
 					dt_bounds_rank.append(dt_bound)
 				#print(dt_bounds_rank)
-				dt_bounds_epoch.append(dt_bounds_rank)
+				if (dt_bounds_rank != []):
+					dt_bounds_epoch.append(dt_bounds_rank)
 
 			#print(dt_bounds_epoch)
 
 			if len(dt_bounds_epoch) != 0:
-				#print('Total time spent in MPI_Get: ' + str(round(get_total, 3)))
-				#print('(% of total exec time: ' + str(round((get_total/total_exec_times[i])*100, 3)) + '%)')
-				#print('Total MPI_Get observations processed: ' + str(len(get_op_durations_per_rank)))
-				#get_avg = get_total/len(get_op_durations_per_rank)
-				#dt_min = min(dt_bounds_epoch)
-				#dt_max = max(dt_bounds_epoch)
-				dt_min = np.min(dt_bounds_epoch)
+
+				#print(f'\t> Bounds for epoch SHAPE : {np.shape(dt_bounds_epoch)}\n')
+
+				dt_min = np.min(dt_bounds_epoch)	
+				#print(f'\t>> dt_min is {dt_min}')
 				min_rank, min_op, = np.where(dt_bounds_epoch == dt_min) 
 				dt_max = np.max(dt_bounds_epoch)
 				max_rank , max_op, = np.where(dt_bounds_epoch == dt_max) 
+				dt_avg = np.mean(dt_bounds_epoch)
 
-				print(f'Min \t\t\t| Max\n{round(dt_min, 3)} (rank {min_rank})\t| {round(dt_max, 3)} (rank {max_rank})')
-				#print(str(round(get_avg, 3)) + ' \t| ' 
-				#	+ str(round(get_min, 3)) + ' \t| ' 
-				#	+ str(round(get_max, 3)) + '\n' )
-				#print('Std dv: ' + str(round(np.std(get_op_durations_per_rank), 3)) + ' | Median: ' +  str(round(np.median(get_op_durations_per_rank), 3)) 
-				#		+ ' |\n90%ile: ' + str(round(np.percentile(get_op_durations_per_rank, 90), 3)) 
-				#		+ ' | 95%ile: '  + str(round(np.percentile(get_op_durations_per_rank, 95), 3)) 
-				#		+ ' | 99%ile: '  + str(round(np.percentile(get_op_durations_per_rank, 99), 3)) + '\n')
+				dt_std_dev = np.std(dt_bounds_epoch)
+				dt_median = np.median(dt_bounds_epoch)
+				dt_90p_lin = np.percentile(dt_bounds_epoch, 90)
+				dt_90p_real = np.percentile(dt_bounds_epoch, 90, method='closest_observation')
+				dt_95p_lin = np.percentile(dt_bounds_epoch, 95)
+				dt_95p_real = np.percentile(dt_bounds_epoch, 95, method='closest_observation')
+				dt_99p_lin = np.percentile(dt_bounds_epoch, 99)
+				dt_99p_real = np.percentile(dt_bounds_epoch, 99, method='closest_observation')
+
+				#print(f'\nMin \t\t\t| Max \t\t\t| Average\n{round(dt_min, 3)} (rank {min_rank})\t| {round(dt_max, 3)} (rank {max_rank}) \t| {round(np.average(dt_bounds_epoch), 3)}\n')
+	
+				#print('Std dv: ' + str(round(dt_std_dev, 3)) + '\nMedian: ' +  str(round(dt_median, 3)) 
+				#		+ ' \n90%ile: ' + str(round(dt_90p_lin, 3)) + ' (linear) / ' + str(round(dt_90p_real, 3)) + ' (actual)' 
+				#		+ ' \n95%ile: ' + str(round(dt_95p_lin, 3)) + ' (linear) / ' + str(round(dt_95p_real, 3)) + ' (actual)'
+				#		+ ' \n99%ile: ' + str(round(dt_99p_lin, 3)) + ' (linear) / ' + str(round(dt_99p_real, 3)) + ' (actual)\n')
+				epoch_statistics.append((dt_min, dt_max, dt_avg, dt_std_dev, dt_median, dt_90p_lin, dt_95p_lin, dt_99p_lin))
 			else:
-				print('No data transfers for this epoch.')
+				#print('No data transfers for this epoch.')
+				epoch_statistics.append((0, 0, 0, 0, 0, 0, 0, 0))
 
 
 		for rank, rma_calls in enumerate(rma_allranks): 	# i.e. for each rank
@@ -348,7 +371,64 @@ def find_epochs():
 		# print(f'Calls for epoch {current_epoch[rank]-1} are {calls_of_epoch}')
 		# here, all ranks are at the same synchronization phase
 
-			
+	
+	total_epochs = len(epoch_statistics)
+
+	print(f'\nTotal number of epochs detected: {total_epochs}.\nPlease select epoch[s] to display statistics for.\n' + 
+		f'(Indicate any integer up to total number of epochs ({total_epochs}) or a range of epochs separated by " - " or "q" to quit.)')
+	
+	while True: 
+
+		action = input('>>> ')
+		
+		if (action == 'q'):
+			sys.exit()
+
+		rangesplit = re.split('-', action)
+
+		if len(rangesplit) > 2:
+			print("Please express range using two integers, such as <lower> - <upper>.")
+			continue
+
+		elif len(rangesplit) == 1:
+
+			try:
+				lower = upper = int(rangesplit[0])
+			except ValueError:
+				print("Please express desired epochs in positive integers.")
+				continue
+
+		else:
+			try:
+				lower = int(rangesplit[0])
+				upper = int(rangesplit[1])
+			except ValueError:
+				print("Sorry, range can only be expressed in integers.")
+				continue
+
+		if (lower > total_epochs) or (upper > total_epochs) or (lower < 1) or (upper < 1) :
+			print(f'Please express epochs using positive integers up to {total_epochs}.')
+			continue
+
+		#lower = int(rangesplit[0])
+		diff  = upper - lower
+		if diff < 0:
+			print('error in range detected')
+		else:
+			if diff > 5:
+				print('Invoking pyplot')
+			else: 
+				for i in range(0, max(1,diff)):
+					print(f'Statistics for epoch {lower+i}')
+					print(f'\nMin \t\t| Max \t\t| Average\n{round(epoch_statistics[lower+i-1][0], 3)} \t\t| {round(epoch_statistics[lower+i-1][1], 3)} \t| {round(epoch_statistics[lower+i-1][2], 3)}\n')
+	
+					print('Std dv: ' + str(round(epoch_statistics[lower+i-1][3], 3)) + '\nMedian: ' +  str(round(epoch_statistics[lower+i-1][4], 3))
+							+ ' \n90%ile: ' + str(round(epoch_statistics[lower+i-1][5], 3))   
+							+ ' \n95%ile: ' + str(round(epoch_statistics[lower+i-1][6], 3))  
+							+ ' \n99%ile: ' + str(round(epoch_statistics[lower+i-1][7], 3)) + '\n')
+			continue
+		break
+
 
 
 
