@@ -263,7 +263,7 @@ def find_epochs():
 	while epochs_done == 0:
 
 		if current_epoch[0] > 1:
-			print('>>> Statistics for epoch ' + str(current_epoch[0]-1) + '\n')
+			#print('>>> Statistics for epoch ' + str(current_epoch[0]-1) + '\n')
 			
 			# print(f'Current fence times are: {current_fence_times}')
 			min_arrival =  np.min(current_fence_times, axis=0)
@@ -415,10 +415,21 @@ def find_epochs():
 		if diff < 0:
 			print('error in range detected')
 		else:
-			if diff > 5:
+			if diff > 3:
 				print('Invoking pyplot')
+				#print(np.shape(epoch_statistics))
+				#for i in range(len(epoch_statistics)):
+				plt.clf()
+				for i, col in enumerate(list(zip(*(epoch_statistics[lower:upper+1])))):
+					#print(np.shape(epoch_statistics[i][lower:upper]))
+					plt.plot(range(lower, upper+1),col, label=statistic_labels[i])
+				plt.xlabel('epochs')
+				plt.ylabel('useconds')
+				plt.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05), fancybox=True, shadow=True, fontsize='x-small', ncol=8)
+				plt.show(block=False)
 			else: 
-				for i in range(0, max(1,diff)):
+				#for i in range(0, max(1,diff)):
+				for i in range(0, diff+1):
 					print(f'Statistics for epoch {lower+i}')
 					print(f'\nMin \t\t| Max \t\t| Average\n{round(epoch_statistics[lower+i-1][0], 3)} \t\t| {round(epoch_statistics[lower+i-1][1], 3)} \t| {round(epoch_statistics[lower+i-1][2], 3)}\n')
 	
@@ -441,6 +452,8 @@ def parse_trace():
 	global start_wall_times
 	global window_union
 
+	global statistic_labels
+
 	#print('Number of arguments: {}'.format(len(argv)))
 	#print('Argument(s) passed: {}'.format(str(argv)))
 
@@ -450,7 +463,7 @@ def parse_trace():
 	rma_set = frozenset(rma_tracked_calls)
 
 
-
+	statistic_labels = ['Min', 'Max', 'Avg', 'Std Dev', 'Median', '90%ile', '95%ile', '99%ile']
 
 	ordered_files = sorted(os.listdir(format(str(dirname))))
 	current_call = ''
