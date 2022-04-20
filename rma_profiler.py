@@ -107,6 +107,21 @@ def filter_calls_per_rank():
 		print('Total execution time: ' + str(round(total_exec_times[i], 3)) + ' | Total time spent in tracked RMA calls: ' 
 										+ str(round(total_rma_durations_per_rank, 3)) + '\n')
 
+		fig, ax = plt.subplots(figsize =(10, 7))
+		wedges, texts, autotexts = ax.pie([other_total, get_total, put_total, acc_total, (total_exec_times[i]-total_rma_durations_per_rank)], 
+											labels = ['other RMA ops', 'MPI_Get', 'MPI_Put', 'MPI_Accumulate', 'other MPI ops'], 
+											explode = (0, 0, 0, 0, 0), autopct='%1.1f%%')
+
+		ax.legend(wedges, ['other RMA ops', 'MPI_Get', 'MPI_Put', 'MPI_Accumulate', 'other MPI ops'],
+          title ="Op types",
+          loc ="center left",
+          bbox_to_anchor =(1, 0, 0.5, 1))
+ 
+		plt.setp(autotexts, size = 8, weight ="bold")
+		ax.set_title(f'Rank {i}')
+
+		plt.show()
+
 		if len(get_op_durations_per_rank) != 0:
 			print('Total time spent in MPI_Get: ' + str(round(get_total, 3)))
 			print('(% of total exec time: ' + str(round((get_total/total_exec_times[i])*100, 3)) + '%)')
@@ -423,8 +438,8 @@ def find_epochs():
 				for i, col in enumerate(list(zip(*(epoch_statistics[lower:upper+1])))):
 					#print(np.shape(epoch_statistics[i][lower:upper]))
 					plt.plot(range(lower, upper+1),col, label=statistic_labels[i])
-				plt.xlabel('epochs')
-				plt.ylabel('useconds')
+				plt.xlabel('Epoch')
+				plt.ylabel('Latency (useconds)')
 				plt.legend(loc='upper center', bbox_to_anchor=(0.5, -0.05), fancybox=True, shadow=True, fontsize='x-small', ncol=8)
 				plt.show(block=False)
 			else: 
