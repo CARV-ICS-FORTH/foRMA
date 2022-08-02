@@ -20,15 +20,8 @@ rma_all_calls = ['MPI_Win_create', 'MPI_Get', 'MPI_Put', 'MPI_Accumulate', 'MPI_
 	
 callCountPerRank = []
 
-def parse_trace(rma_tracked_calls):
+def parse_trace_per_epoch(rma_tracked_calls):
 
-	global rma_allranks
-	global windows_per_node
-	global total_exec_times
-	global start_wall_times
-
-
-	global statistic_labels
 
 	rma_set = frozenset(rma_tracked_calls)
 	
@@ -42,16 +35,18 @@ def parse_trace(rma_tracked_calls):
 	print(rma_indexes)
 
 
-	statistic_labels = ['Min', 'Max', 'Avg', 'Std Dev', 'Median', '90%ile', '95%ile', '99%ile']
-
 	ordered_files_all = sorted(os.listdir(format(str(dirname))))
 	ordered_files = []
+	ordered_ascii_files = []
 
 	for filename in ordered_files_all:
 		if fnmatch.fnmatch(filename, 'dumpi-'+format(str(timestamp))+'*.bin'):
 			filepath = format(str(dirname))+'/'+format(str(filename))
 			ordered_files.append(filepath)
-			# print('rma profiler: File path is: '+filepath)
+			ascii_filepath = filepath.strip('.bin')+'.ascii'
+			os.system('/home/kanellou/opt/sst-dumpi-11.1.0/bin/dumpi2ascii -S '+filepath+' > ' + ascii_filepath)
+			ordered_ascii_files.append(ascii_filepath)
+	#print(ordered_ascii_files)
 
 	totalRanks = len(ordered_files)
 	totalCallTypes = len(rma_tracked_calls)
@@ -59,103 +54,87 @@ def parse_trace(rma_tracked_calls):
 	rmaCallDurationSums = np.zeros((totalRanks, totalCallTypes), float)
 	rmaOcurrencesPerRank = np.zeros((totalRanks, totalCallTypes), int)
 
-	current_call = ''
-	start_wall_time = 0
-	end_wall_time = 0
-	start_cpu_time = 0
-	end_cpu_time = 0
-	current_window = 0
-	current_bytes = 0
-	current_size = 0
-	current_type = ''
-	current_target = 0
-	current_op = ''
-	current_duration_wall = 0
-	current_duration_cpu = 0
+
+	fileOffsets = np.zeros(totalRanks, int)
+
+	filesFinished = np.full(totalRanks, False)
+
+	
+	while (not np.all(filesFinished)):
+		rank = 0 # will use this as index  to numpy arrays with statistics
+
+		for filepath in ordered_ascii_files:
+			print('not done!'+str(rank))
+			print('rma profiler: File path is: '+filepath)
+
+			monitoring_call = 0
+			
+			if len(callCountPerRank) > rank:
+				callCount = callCountPerRank[rank]
+			else:
+				callCount = 0
 
 
-	callCount = 0
+			file = open(filepath, 'r')
+			if fileOffsets[rank] == 0:
+				line = next(file)
+				line = line.strip()
+				linesplit = re.split(' |, ', line)
+
+				start_time = float(linesplit[6]) * 1000000 # convert to usec right away
+
+				
+			file.seek(fileOffsets[rank])
+
+			# from https://www.geeksforgeeks.org/python-how-to-search-for-a-string-in-text-files/
+			line = file.readline()
+			while line:
+				line = line.strip()
+				linesplit = re.split(' |, ', line)
+
+				if monitoring_call == 0:
+					if linesplit[0] in rma_set and linesplit[1] == 'entering':
+						monitoring_call = 1
+						current_call = linesplit[0]
+						rma_occurrences[current_call] += 1
+						rmaOcurrencesPerRank[rank][int(rma_indexes[current_call])] += 1
+						callCount+=1
+						start_cpu_time = float(linesplit[6]) * 1000000 # convert to usec right away
 
 
-	start_wall_times = []
-	fileOffsets = np.zeros((totalRanks, totalCallTypes), int)
+				elif monitoring_call == 1:
+					if linesplit[1] == 'returning':
+						monitoring_call = 0
+						end_cpu_time = float(linesplit[6]) * 1000000 # convert to usec right away
+						current_duration_cpu = end_cpu_time - start_cpu_time
 
-	rank = 0 # will use this as index  to numpy arrays with statistics
-	#for filename in os.listdir(format(str(dirname))):
-	for filepath in ordered_files:
-		print('rma profiler: File path is: '+filepath)
-		os.system('/home/kanellou/opt/sst-dumpi-11.1.0/bin/dumpi2ascii -S '+filepath+' > d2atemp.out')
+						#print(rma_indexes[current_call])
 
+						rmaCallDurationSums[rank][int(rma_indexes[current_call])] += current_duration_cpu
 
-		rma_node_timeseries = []
+						if current_call == 'MPI_Win_fence':
+							fileOffsets[rank] = file.tell()
+							break;
+				line = file.readline()
+			print(f'File left at position {fileOffsets[rank]}')
 
-		monitoring_call = 0
+			if line == '':
+				filesFinished[rank] = True
+				file.seek(fileOffsets[rank])
+				line = file.readlines()[-1]
+				line = line.strip()
+				linesplit = re.split(' |, ', line)
+				end_time = float(linesplit[6]) * 1000000 # convert to usec right away
 
-		i = 0 # read second line
+				exec_time = end_time - start_time
 
-		file = open('d2atemp.out', 'r')
-		#next(file)
-		line = next(file)
-		line = line.strip()
-		linesplit = re.split(' |, ', line)
+			if len(callCountPerRank) > rank:
+				callCountPerRank[rank] = callCount
+			else:
+				callCountPerRank.append(callCount)
 
-		start_time = float(linesplit[6]) * 1000000 # convert to usec right away
-
-		#start_times.append(start_time)
-
-		start_wall_times.append(float(linesplit[4])*1000000)
-
-		#print(start_times)
-		file.seek(0)
-
-		callCount = 0
-
-		# from https://www.geeksforgeeks.org/python-how-to-search-for-a-string-in-text-files/
-		for line in file:
-			line = line.strip()
-			linesplit = re.split(' |, ', line)
-
-			if monitoring_call == 0:
-				if linesplit[0] in rma_set and linesplit[1] == 'entering':
-					monitoring_call = 1
-					current_call = linesplit[0]
-					rma_occurrences[current_call] += 1
-					rmaOcurrencesPerRank[rank][int(rma_indexes[current_call])] += 1
-					callCount+=1
-					start_cpu_time = float(linesplit[6]) * 1000000 # convert to usec right away
-
-
-			elif monitoring_call == 1:
-				if linesplit[1] == 'returning':
-					monitoring_call = 0
-					end_cpu_time = float(linesplit[6]) * 1000000 # convert to usec right away
-					current_duration_cpu = end_cpu_time - start_cpu_time
-
-					#print(rma_indexes[current_call])
-
-					rmaCallDurationSums[rank][int(rma_indexes[current_call])] += current_duration_cpu
-
-				#elif
-		#print(rmaCallDurationSums)
-
-
-		end_time = float(linesplit[6]) * 1000000 # convert to usec right away
-		#end_times.append(end_time)
-		#print(end_times)
-
-		exec_time = end_time - start_time
-		#print(total_exec_times)
-		
-		#file.seek(0)
-		#bdata = file.read()
-		#print('rma profiler: Binary sentence', bdata)
-
-		callCountPerRank.append(callCount)
-		
-		file.close()
-		os.system('rm d2atemp.out')
-		rank+=1
-#		print(rma_node_timeseries)
+			rank+=1
+	print('done')
 
 	print("Average RMA durations per rank:")
 	for i in range(0, totalRanks):
@@ -177,7 +156,12 @@ def parse_trace(rma_tracked_calls):
 	#filter_calls_per_rank(rma_allranks, windows_per_node, total_exec_times)
 	#fence_summary(rma_allranks, windows_per_node)
 
+	for file in ordered_ascii_files:
+		os.system('rm '+ file)
+
 	return rma_occurrences
+
+
 
 
 
@@ -276,7 +260,7 @@ def main():
 		sys.exit()
 
 
-	rma_occurrences = parse_trace(rma_all_calls)
+	rma_occurrences = parse_trace_per_epoch(rma_all_calls)
 
 
 	cc = read_footers_native(dirname, timestamp)
@@ -355,3 +339,172 @@ def read_footers_bash(dirname, timestamp):
 			(k, v) = cleanline.split(":")
 			cc[k] = int(v)
 	return cc
+
+
+
+def parse_trace(rma_tracked_calls):
+
+	global rma_allranks
+	global windows_per_node
+	global total_exec_times
+	global start_wall_times
+
+
+	global statistic_labels
+
+	rma_set = frozenset(rma_tracked_calls)
+	
+	# use this in order to later validate with the amount of each call detected in the trace footers
+	rma_occurrences = { i : 0 for i in rma_tracked_calls }
+
+	# use this in order to later validate with the amount of each call detected in the trace footers
+	j = 0
+	#rma_indexes = { i : a for i, a in enumerate(rma_tracked_calls) }
+	rma_indexes = { i : a for a, i in enumerate(rma_tracked_calls) }
+	print(rma_indexes)
+
+
+	statistic_labels = ['Min', 'Max', 'Avg', 'Std Dev', 'Median', '90%ile', '95%ile', '99%ile']
+
+	ordered_files_all = sorted(os.listdir(format(str(dirname))))
+	ordered_files = []
+	ordered_ascii_files = []
+
+	for filename in ordered_files_all:
+		if fnmatch.fnmatch(filename, 'dumpi-'+format(str(timestamp))+'*.bin'):
+			filepath = format(str(dirname))+'/'+format(str(filename))
+			ordered_files.append(filepath)
+			ascii_filepath = filepath.strip('.bin')+'.ascii'
+			os.system('/home/kanellou/opt/sst-dumpi-11.1.0/bin/dumpi2ascii -S '+filepath+' > ' + ascii_filepath)
+			ordered_ascii_files.append(ascii_filepath)
+	#print(ordered_ascii_files)
+
+	totalRanks = len(ordered_files)
+	totalCallTypes = len(rma_tracked_calls)
+
+	rmaCallDurationSums = np.zeros((totalRanks, totalCallTypes), float)
+	rmaOcurrencesPerRank = np.zeros((totalRanks, totalCallTypes), int)
+
+	current_call = ''
+	start_wall_time = 0
+	end_wall_time = 0
+	start_cpu_time = 0
+	end_cpu_time = 0
+	current_window = 0
+	current_bytes = 0
+	current_size = 0
+	current_type = ''
+	current_target = 0
+	current_op = ''
+	current_duration_wall = 0
+	current_duration_cpu = 0
+
+
+	callCount = 0
+
+
+	start_wall_times = []
+	fileOffsets = np.zeros((totalRanks, totalCallTypes), int)
+
+	rank = 0 # will use this as index  to numpy arrays with statistics
+	#for filename in os.listdir(format(str(dirname))):
+	for filepath in ordered_ascii_files:
+		print('rma profiler: File path is: '+filepath)
+		# os.system('/home/kanellou/opt/sst-dumpi-11.1.0/bin/dumpi2ascii -S '+filepath+' > d2atemp.out')
+
+
+		rma_node_timeseries = []
+
+		monitoring_call = 0
+
+		i = 0 # read second line
+
+		#file = open('d2atemp.out', 'r')
+		file = open(filepath, 'r')
+		#next(file)
+		line = next(file)
+		line = line.strip()
+		linesplit = re.split(' |, ', line)
+
+		start_time = float(linesplit[6]) * 1000000 # convert to usec right away
+
+		#start_times.append(start_time)
+
+		start_wall_times.append(float(linesplit[4])*1000000)
+
+		#print(start_times)
+		file.seek(0)
+
+		callCount = 0
+
+		# from https://www.geeksforgeeks.org/python-how-to-search-for-a-string-in-text-files/
+		for line in file:
+			line = line.strip()
+			linesplit = re.split(' |, ', line)
+
+			if monitoring_call == 0:
+				if linesplit[0] in rma_set and linesplit[1] == 'entering':
+					monitoring_call = 1
+					current_call = linesplit[0]
+					rma_occurrences[current_call] += 1
+					rmaOcurrencesPerRank[rank][int(rma_indexes[current_call])] += 1
+					callCount+=1
+					start_cpu_time = float(linesplit[6]) * 1000000 # convert to usec right away
+
+
+			elif monitoring_call == 1:
+				if linesplit[1] == 'returning':
+					monitoring_call = 0
+					end_cpu_time = float(linesplit[6]) * 1000000 # convert to usec right away
+					current_duration_cpu = end_cpu_time - start_cpu_time
+
+					#print(rma_indexes[current_call])
+
+					rmaCallDurationSums[rank][int(rma_indexes[current_call])] += current_duration_cpu
+
+				#elif
+		#print(rmaCallDurationSums)
+
+
+		end_time = float(linesplit[6]) * 1000000 # convert to usec right away
+		#end_times.append(end_time)
+		#print(end_times)
+
+		exec_time = end_time - start_time
+		#print(total_exec_times)
+		
+		#file.seek(0)
+		#bdata = file.read()
+		#print('rma profiler: Binary sentence', bdata)
+
+		callCountPerRank.append(callCount)
+		
+		file.close()
+		#os.system('rm d2atemp.out')
+		rank+=1
+#		print(rma_node_timeseries)
+
+	print("Average RMA durations per rank:")
+	for i in range(0, totalRanks):
+		print("Rank " + str(i) + ":")
+		print('MPI_Win_create: ' + str(rmaCallDurationSums[i][int(rma_indexes['MPI_Win_create'])]/rmaOcurrencesPerRank[i][int(rma_indexes['MPI_Win_create'])]) + 
+				' | MPI_Get:' + str(rmaCallDurationSums[i][int(rma_indexes['MPI_Get'])]/rmaOcurrencesPerRank[i][int(rma_indexes['MPI_Get'])]) +
+				' | MPI_Put:' + str(rmaCallDurationSums[i][int(rma_indexes['MPI_Put'])]/rmaOcurrencesPerRank[i][int(rma_indexes['MPI_Put'])]) +
+				' | MPI_Accumulate:' + str(rmaCallDurationSums[i][int(rma_indexes['MPI_Accumulate'])]/rmaOcurrencesPerRank[i][int(rma_indexes['MPI_Accumulate'])]) +
+				' | MPI_Win_free:' + str(rmaCallDurationSums[i][int(rma_indexes['MPI_Win_free'])]/rmaOcurrencesPerRank[i][int(rma_indexes['MPI_Win_free'])]) +
+				' | MPI_Win_fence:' + str(rmaCallDurationSums[i][int(rma_indexes['MPI_Win_fence'])]/rmaOcurrencesPerRank[i][int(rma_indexes['MPI_Win_fence'])]))
+		
+	print("\nAverage RMA durations in total:")
+	print('MPI_Win_create: ' + str(sum(rmaCallDurationSums[:,int(rma_indexes['MPI_Win_create'])])/rma_occurrences['MPI_Win_create']) + 
+				' | MPI_Get:' + str(sum(rmaCallDurationSums[:,int(rma_indexes['MPI_Get'])])/rma_occurrences['MPI_Get']) + 
+				' | MPI_Put:' + str(sum(rmaCallDurationSums[:,int(rma_indexes['MPI_Put'])])/rma_occurrences['MPI_Put']) + 
+				' | MPI_Accumulate:' + str(sum(rmaCallDurationSums[:,int(rma_indexes['MPI_Accumulate'])])/rma_occurrences['MPI_Accumulate']) + 
+				' | MPI_Win_free:' + str(sum(rmaCallDurationSums[:,int(rma_indexes['MPI_Win_free'])])/rma_occurrences['MPI_Win_free']) + 
+				' | MPI_Win_fence:' + str(sum(rmaCallDurationSums[:,int(rma_indexes['MPI_Win_fence'])])/rma_occurrences['MPI_Win_fence']))
+	#filter_calls_per_rank(rma_allranks, windows_per_node, total_exec_times)
+	#fence_summary(rma_allranks, windows_per_node)
+
+	for file in ordered_ascii_files:
+		os.system('rm '+ file)
+
+	return rma_occurrences
