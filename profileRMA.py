@@ -8,6 +8,7 @@ import fnmatch
 import numpy as np
 import collections
 import subprocess
+import math
 
 import matplotlib.pyplot as plt
 
@@ -19,6 +20,20 @@ import matplotlib.pyplot as plt
 rma_all_calls = ['MPI_Win_create', 'MPI_Get', 'MPI_Put', 'MPI_Accumulate', 'MPI_Win_free', 'MPI_Win_fence']
 	
 callCountPerRank = []
+
+
+
+def print_per_call(totalRanks, perCallPerRankStatistics, perCallStatistics, rma_indexes):
+
+	print('\t\t * * * PER RANK / PER RMA OP TYPE SUMMARY [ min  max  avg  std dev ] * * *')
+	print('\t\t MPI_Win_create \t|\t MPI_Get \t|\t MPI_Put \t|\t MPI_Acc \t|\t MPI_Win_fence \t|\t MPI_Win_free')
+	for i in range(0, totalRanks):
+		print(f'Rank {i}:\t {perCallPerRankStatistics[i][rma_indexes["MPI_Win_create"]]}\t{perCallPerRankStatistics[i][rma_indexes["MPI_Get"]]}\t{perCallPerRankStatistics[i][rma_indexes["MPI_Put"]]}\t{perCallPerRankStatistics[i][rma_indexes["MPI_Accumulate"]]}\t{perCallPerRankStatistics[i][rma_indexes["MPI_Win_fence"]]}\t{perCallPerRankStatistics[i][rma_indexes["MPI_Win_free"]]}')
+
+	print('\t\t * * * PER RMA OP TYPE SUMMARY [ min  max  avg  std dev ] * * *')
+	print('\t\t MPI_Win_create \t|\t MPI_Get \t|\t MPI_Put \t|\t MPI_Acc \t|\t MPI_Win_fence \t|\t MPI_Win_free')
+	print(f'\t {perCallStatistics[rma_indexes["MPI_Win_create"]]}\t{perCallStatistics[rma_indexes["MPI_Get"]]}\t{perCallStatistics[rma_indexes["MPI_Put"]]}\t{perCallStatistics[rma_indexes["MPI_Accumulate"]]}\t{perCallStatistics[rma_indexes["MPI_Win_fence"]]}\t{perCallStatistics[rma_indexes["MPI_Win_free"]]}')
+
 
 def parse_trace_per_epoch(rma_tracked_calls):
 
@@ -52,8 +67,12 @@ def parse_trace_per_epoch(rma_tracked_calls):
 	totalCallTypes = len(rma_tracked_calls)
 
 	rmaCallDurationSums = np.zeros((totalRanks, totalCallTypes), float)
+	rmaCallDurationSquares = np.zeros((totalRanks, totalCallTypes), float)
 	rmaOcurrencesPerRank = np.zeros((totalRanks, totalCallTypes), int)
 
+	# 3rd dimension is 4 for min, max, average, std dev
+	perCallPerRankStatistics = np.zeros((totalRanks, totalCallTypes, 4), float)
+	perCallStatistics = np.zeros((totalCallTypes, 4), float)
 
 	fileOffsets = np.zeros(totalRanks, int)
 
@@ -64,8 +83,8 @@ def parse_trace_per_epoch(rma_tracked_calls):
 		rank = 0 # will use this as index  to numpy arrays with statistics
 
 		for filepath in ordered_ascii_files:
-			print('not done!'+str(rank))
-			print('rma profiler: File path is: '+filepath)
+			#print('not done!'+str(rank))
+			#print('rma profiler: File path is: '+filepath)
 
 			monitoring_call = 0
 			
@@ -111,12 +130,20 @@ def parse_trace_per_epoch(rma_tracked_calls):
 						#print(rma_indexes[current_call])
 
 						rmaCallDurationSums[rank][int(rma_indexes[current_call])] += current_duration_cpu
+						rmaCallDurationSquares[rank][int(rma_indexes[current_call])] += current_duration_cpu*current_duration_cpu
+
+						if current_duration_cpu < perCallPerRankStatistics[rank][int(rma_indexes[current_call])][0] or perCallPerRankStatistics[rank][int(rma_indexes[current_call])][0] == 0:
+							perCallPerRankStatistics[rank][int(rma_indexes[current_call])][0] = current_duration_cpu #new min
+
+						if current_duration_cpu > perCallPerRankStatistics[rank][int(rma_indexes[current_call])][1]:
+							perCallPerRankStatistics[rank][int(rma_indexes[current_call])][1] = current_duration_cpu #new max
+
 
 						if current_call == 'MPI_Win_fence':
 							fileOffsets[rank] = file.tell()
 							break;
 				line = file.readline()
-			print(f'File left at position {fileOffsets[rank]}')
+			#print(f'File left at position {fileOffsets[rank]}')
 
 			if line == '':
 				filesFinished[rank] = True
@@ -134,9 +161,36 @@ def parse_trace_per_epoch(rma_tracked_calls):
 				callCountPerRank.append(callCount)
 
 			rank+=1
-	print('done')
+	#print('done')
 
-	print("Average RMA durations per rank:")
+	
+	for call in rma_tracked_calls:
+		for i in range(0, totalRanks):
+			if rmaOcurrencesPerRank[i][int(rma_indexes[call])] == 0:
+				perCallPerRankStatistics[i][int(rma_indexes[call])][2] = 0
+			else:
+				perCallPerRankStatistics[i][int(rma_indexes[call])][2] = round(rmaCallDurationSums[i][int(rma_indexes[call])]/rmaOcurrencesPerRank[i][int(rma_indexes[call])], 3) # average
+
+			if rmaOcurrencesPerRank[i][int(rma_indexes[call])] == 0:
+				perCallPerRankStatistics[i][int(rma_indexes[call])][3] = 0
+			else:
+				perCallPerRankStatistics[i][int(rma_indexes[call])][3] = round(rmaCallDurationSquares[i][int(rma_indexes[call])]/rmaOcurrencesPerRank[i][int(rma_indexes[call])] - perCallPerRankStatistics[i][int(rma_indexes[call])][2]*perCallPerRankStatistics[i][int(rma_indexes[call])][2], 3)  # std deviation
+
+
+		perCallStatistics[int(rma_indexes[call])][0] = min(rmaCallDurationSums[:,int(rma_indexes[call])])
+		perCallStatistics[int(rma_indexes[call])][1] = max(rmaCallDurationSums[:,int(rma_indexes[call])])
+
+		if rmaOcurrencesPerRank[i][int(rma_indexes[call])] == 0:
+			perCallStatistics[int(rma_indexes[call])][2] = 0
+			perCallStatistics[int(rma_indexes[call])][3] = 0
+		else:
+			perCallStatistics[int(rma_indexes[call])][2] = round(sum(rmaCallDurationSums[:,int(rma_indexes[call])])/rma_occurrences[call], 3)	
+			perCallStatistics[int(rma_indexes[call])][3] = round((sum(rmaCallDurationSquares[:,int(rma_indexes[call])])/rma_occurrences[call]) - (perCallStatistics[int(rma_indexes[call])][2]*perCallStatistics[int(rma_indexes[call])][2]), 3)
+
+
+	print_per_call(totalRanks, perCallPerRankStatistics, perCallStatistics, rma_indexes)
+
+	"""print("Average RMA durations per rank:")
 	for i in range(0, totalRanks):
 		print("Rank " + str(i) + ":")
 		print('MPI_Win_create: ' + str(rmaCallDurationSums[i][int(rma_indexes['MPI_Win_create'])]/rmaOcurrencesPerRank[i][int(rma_indexes['MPI_Win_create'])]) + 
@@ -154,7 +208,7 @@ def parse_trace_per_epoch(rma_tracked_calls):
 				' | MPI_Win_free:' + str(sum(rmaCallDurationSums[:,int(rma_indexes['MPI_Win_free'])])/rma_occurrences['MPI_Win_free']) + 
 				' | MPI_Win_fence:' + str(sum(rmaCallDurationSums[:,int(rma_indexes['MPI_Win_fence'])])/rma_occurrences['MPI_Win_fence']))
 	#filter_calls_per_rank(rma_allranks, windows_per_node, total_exec_times)
-	#fence_summary(rma_allranks, windows_per_node)
+	#fence_summary(rma_allranks, windows_per_node) """
 
 	for file in ordered_ascii_files:
 		os.system('rm '+ file)
