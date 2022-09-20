@@ -10,7 +10,10 @@ import collections
 import subprocess
 import math
 
+from bisect import insort
+
 import matplotlib.pyplot as plt
+
 
 
 #rma_all_calls = ['MPI_Win_create', 'MPI_Get', 'MPI_Put', 'MPI_Accumulate', 'MPI_Win_free', 'MPI_Win_fence', 'MPI_Win_post', 'MPI_Win_start', 'MPI_Win_complete', 'MPI_Win_wait']
@@ -21,11 +24,9 @@ rma_all_calls = ['MPI_Win_create', 'MPI_Get', 'MPI_Put', 'MPI_Accumulate', 'MPI_
 	
 callCountPerRank = []
 
-
-
 def print_per_call(totalRanks, perCallPerRankStatistics, perCallStatistics, rma_indexes):
 
-	print('\t\t * * * PER RANK / PER RMA OP TYPE SUMMARY [ min  max  avg  std dev ] * * *')
+	print('\t\t * * * PER RANK / PER RMA OP TYPE SUMMARY [ min  max  avg  std_dev ] * * *')
 	print('\t\t MPI_Win_create \t|\t MPI_Get \t|\t MPI_Put \t|\t MPI_Acc \t|\t MPI_Win_fence \t|\t MPI_Win_free')
 	for i in range(0, totalRanks):
 		print(f'Rank {i}:\t {perCallPerRankStatistics[i][rma_indexes["MPI_Win_create"]]}\t{perCallPerRankStatistics[i][rma_indexes["MPI_Get"]]}\t{perCallPerRankStatistics[i][rma_indexes["MPI_Put"]]}\t{perCallPerRankStatistics[i][rma_indexes["MPI_Accumulate"]]}\t{perCallPerRankStatistics[i][rma_indexes["MPI_Win_fence"]]}\t{perCallPerRankStatistics[i][rma_indexes["MPI_Win_free"]]}')
@@ -78,91 +79,136 @@ def parse_trace_per_epoch(rma_tracked_calls):
 
 	filesFinished = np.full(totalRanks, False)
 
-	
+	windows = set()
+	communicators = set()
+
+	current_fence_data = 0
+	fenceData = []
+
 	while (not np.all(filesFinished)):
 		rank = 0 # will use this as index  to numpy arrays with statistics
 
 		for filepath in ordered_ascii_files:
-			#print('not done!'+str(rank))
-			#print('rma profiler: File path is: '+filepath)
 
-			monitoring_call = 0
-			
-			if len(callCountPerRank) > rank:
-				callCount = callCountPerRank[rank]
-			else:
-				callCount = 0
+			if filesFinished[rank] == False:
+				#print('not done!'+str(rank))
+				print('rma profiler: File path is: '+filepath)
 
-
-			file = open(filepath, 'r')
-			if fileOffsets[rank] == 0:
-				line = next(file)
-				line = line.strip()
-				linesplit = re.split(' |, ', line)
-
-				start_time = float(linesplit[6]) * 1000000 # convert to usec right away
-
+				monitoring_call = 0
 				
-			file.seek(fileOffsets[rank])
-
-			# from https://www.geeksforgeeks.org/python-how-to-search-for-a-string-in-text-files/
-			line = file.readline()
-			while line:
-				line = line.strip()
-				linesplit = re.split(' |, ', line)
-
-				if monitoring_call == 0:
-					if linesplit[0] in rma_set and linesplit[1] == 'entering':
-						monitoring_call = 1
-						current_call = linesplit[0]
-						rma_occurrences[current_call] += 1
-						rmaOcurrencesPerRank[rank][int(rma_indexes[current_call])] += 1
-						callCount+=1
-						start_cpu_time = float(linesplit[6]) * 1000000 # convert to usec right away
+				if len(callCountPerRank) > rank:
+					callCount = callCountPerRank[rank]
+				else:
+					callCount = 0
 
 
-				elif monitoring_call == 1:
-					if linesplit[1] == 'returning':
-						monitoring_call = 0
-						end_cpu_time = float(linesplit[6]) * 1000000 # convert to usec right away
-						current_duration_cpu = end_cpu_time - start_cpu_time
+				file = open(filepath, 'r')
 
-						#print(rma_indexes[current_call])
+				if fileOffsets[rank] == 0:
+					line = next(file)
+					line = line.strip()
+					linesplit = re.split(' |, ', line)
 
-						rmaCallDurationSums[rank][int(rma_indexes[current_call])] += current_duration_cpu
-						rmaCallDurationSquares[rank][int(rma_indexes[current_call])] += current_duration_cpu*current_duration_cpu
+					start_time = float(linesplit[6]) * 1000000 # convert to usec right away
 
-						if current_duration_cpu < perCallPerRankStatistics[rank][int(rma_indexes[current_call])][0] or perCallPerRankStatistics[rank][int(rma_indexes[current_call])][0] == 0:
-							perCallPerRankStatistics[rank][int(rma_indexes[current_call])][0] = current_duration_cpu #new min
-
-						if current_duration_cpu > perCallPerRankStatistics[rank][int(rma_indexes[current_call])][1]:
-							perCallPerRankStatistics[rank][int(rma_indexes[current_call])][1] = current_duration_cpu #new max
-
-
-						if current_call == 'MPI_Win_fence':
-							fileOffsets[rank] = file.tell()
-							break;
-				line = file.readline()
-			#print(f'File left at position {fileOffsets[rank]}')
-
-			if line == '':
-				filesFinished[rank] = True
+					
 				file.seek(fileOffsets[rank])
-				line = file.readlines()[-1]
-				line = line.strip()
-				linesplit = re.split(' |, ', line)
-				end_time = float(linesplit[6]) * 1000000 # convert to usec right away
 
-				exec_time = end_time - start_time
+				# from https://www.geeksforgeeks.org/python-how-to-search-for-a-string-in-text-files/
+				line = file.readline()
+				while line:
+					line = line.strip()
+					linesplit = re.split(' |, ', line)
 
-			if len(callCountPerRank) > rank:
-				callCountPerRank[rank] = callCount
+					if monitoring_call == 0:
+						if linesplit[0] in rma_set and linesplit[1] == 'entering':
+							monitoring_call = 1
+							current_call = linesplit[0]
+							rma_occurrences[current_call] += 1
+							rmaOcurrencesPerRank[rank][int(rma_indexes[current_call])] += 1
+							callCount+=1
+							start_cpu_time = float(linesplit[6]) * 1000000 # convert to usec right away
+
+
+					elif monitoring_call == 1:
+
+						if 'win' in linesplit[1]: 
+							#print((linesplit[1].split('='))[1])
+							current_window = int((linesplit[1].split('='))[1])
+							if current_call in  ('MPI_Win_create', 'MPI_Accumulate', 'MPI_Get', 'MPI_Put'):
+								windows.add(current_window)
+
+							"""if current_call == "MPI_Win_create":
+								print(f'Rank {rank}: MPI_Win_create window {current_window}')
+							if current_call == "MPI_Win_free":
+								print(f'Rank {rank}: MPI_Win_free window {current_window}')
+							"""
+
+							if current_call == "MPI_Win_fence":
+								print(f'Rank {rank}: MPI_Win_fence on window {current_window}')
+
+
+						if 'comm' in linesplit[1]:
+							if current_call == "MPI_Win_create":
+								current_communicator = int((linesplit[1].split('='))[1])
+								communicators.add(current_communicator)
+							
+
+						if linesplit[1] == 'returning':
+							monitoring_call = 0
+							end_cpu_time = float(linesplit[6]) * 1000000 # convert to usec right away
+							current_duration_cpu = end_cpu_time - start_cpu_time
+
+							#print(rma_indexes[current_call])
+
+							rmaCallDurationSums[rank][int(rma_indexes[current_call])] += current_duration_cpu
+							rmaCallDurationSquares[rank][int(rma_indexes[current_call])] += (current_duration_cpu*current_duration_cpu)
+
+							if current_duration_cpu < perCallPerRankStatistics[rank][int(rma_indexes[current_call])][0] or perCallPerRankStatistics[rank][int(rma_indexes[current_call])][0] == 0:
+								perCallPerRankStatistics[rank][int(rma_indexes[current_call])][0] = current_duration_cpu #new min
+
+							if current_duration_cpu > perCallPerRankStatistics[rank][int(rma_indexes[current_call])][1]:
+								perCallPerRankStatistics[rank][int(rma_indexes[current_call])][1] = current_duration_cpu #new max
+
+							if current_call == 'MPI_Win_fence':
+								fileOffsets[rank] = file.tell()
+								break;
+					line = file.readline()
+				#print(f'File left at position {fileOffsets[rank]}')
+
+				if line == '':
+					filesFinished[rank] = True
+					file.seek(fileOffsets[rank])
+					line = file.readlines()[-1]
+					line = line.strip()
+					linesplit = re.split(' |, ', line)
+					end_time = float(linesplit[6]) * 1000000 # convert to usec right away
+
+					exec_time = end_time - start_time
+
+				if len(callCountPerRank) > rank:
+					callCountPerRank[rank] = callCount
+				else:
+					callCountPerRank.append(callCount)
+
+				rank+=1
 			else:
-				callCountPerRank.append(callCount)
+				# should I zero out something on perCallPerRankStatistics here?
+				rank+=1
 
-			rank+=1
+		#if(current_call == 'MPI_Win_fence'): # if the last rank has a finished file, the epoch does not get counted!
+		if rank == totalRanks:
+			print(f'-> Finished epoch: {current_fence_data}')
+			fenceData.append(current_fence_data)
+			current_fence_data += 1
+
+	print(f'Total epochs detected: {current_fence_data}\nTotal windows detected: {len(windows)}\nTotal communicators detected: {len(communicators)}')
+
 	#print('done')
 
+
+	# create summary per call and rank and per call in total
+	# calculates min, max, average (mean) and std deviation
 	
 	for call in rma_tracked_calls:
 		for i in range(0, totalRanks):
@@ -171,21 +217,29 @@ def parse_trace_per_epoch(rma_tracked_calls):
 			else:
 				perCallPerRankStatistics[i][int(rma_indexes[call])][2] = round(rmaCallDurationSums[i][int(rma_indexes[call])]/rmaOcurrencesPerRank[i][int(rma_indexes[call])], 3) # average
 
-			if rmaOcurrencesPerRank[i][int(rma_indexes[call])] == 0:
+			if rmaOcurrencesPerRank[i][int(rma_indexes[call])] == 0 or rmaOcurrencesPerRank[i][int(rma_indexes[call])] == 1:
 				perCallPerRankStatistics[i][int(rma_indexes[call])][3] = 0
 			else:
-				perCallPerRankStatistics[i][int(rma_indexes[call])][3] = round(rmaCallDurationSquares[i][int(rma_indexes[call])]/rmaOcurrencesPerRank[i][int(rma_indexes[call])] - perCallPerRankStatistics[i][int(rma_indexes[call])][2]*perCallPerRankStatistics[i][int(rma_indexes[call])][2], 3)  # std deviation
+				perCallPerRankStatistics[i][int(rma_indexes[call])][3] = round(math.sqrt(rmaCallDurationSquares[i][int(rma_indexes[call])]/rmaOcurrencesPerRank[i][int(rma_indexes[call])] - perCallPerRankStatistics[i][int(rma_indexes[call])][2]*perCallPerRankStatistics[i][int(rma_indexes[call])][2]), 3)  # std deviation
+				
+			if perCallStatistics[int(rma_indexes[call])][0] == 0 or perCallStatistics[int(rma_indexes[call])][0] > perCallPerRankStatistics[i][int(rma_indexes[call])][0]:
+				perCallStatistics[int(rma_indexes[call])][0] = perCallPerRankStatistics[i][int(rma_indexes[call])][0]
 
+			if perCallStatistics[int(rma_indexes[call])][1] < perCallPerRankStatistics[i][int(rma_indexes[call])][1]:
+				perCallStatistics[int(rma_indexes[call])][1] = perCallPerRankStatistics[i][int(rma_indexes[call])][1]
 
-		perCallStatistics[int(rma_indexes[call])][0] = min(rmaCallDurationSums[:,int(rma_indexes[call])])
-		perCallStatistics[int(rma_indexes[call])][1] = max(rmaCallDurationSums[:,int(rma_indexes[call])])
+		# compact way: 
+		#print(perCallPerRankStatistics[:,int(rma_indexes[call]),1])
 
-		if rmaOcurrencesPerRank[i][int(rma_indexes[call])] == 0:
+		if rma_occurrences[call] == 0:
 			perCallStatistics[int(rma_indexes[call])][2] = 0
 			perCallStatistics[int(rma_indexes[call])][3] = 0
 		else:
-			perCallStatistics[int(rma_indexes[call])][2] = round(sum(rmaCallDurationSums[:,int(rma_indexes[call])])/rma_occurrences[call], 3)	
-			perCallStatistics[int(rma_indexes[call])][3] = round((sum(rmaCallDurationSquares[:,int(rma_indexes[call])])/rma_occurrences[call]) - (perCallStatistics[int(rma_indexes[call])][2]*perCallStatistics[int(rma_indexes[call])][2]), 3)
+			perCallStatistics[int(rma_indexes[call])][2] = round(sum(rmaCallDurationSums[:,int(rma_indexes[call])])/rma_occurrences[call], 3)
+			if rma_occurrences[call] == 1:
+				perCallStatistics[int(rma_indexes[call])][3] = 0
+			else:
+				perCallStatistics[int(rma_indexes[call])][3] = round(math.sqrt(sum(rmaCallDurationSquares[:,int(rma_indexes[call])])/rma_occurrences[call] - (perCallStatistics[int(rma_indexes[call])][2]*perCallStatistics[int(rma_indexes[call])][2])), 3)
 
 
 	print_per_call(totalRanks, perCallPerRankStatistics, perCallStatistics, rma_indexes)
@@ -312,6 +366,7 @@ def main():
 	except getopt.GetoptError:
 		print ('Exception: wrong usage. Use  ' + str(sys.argv[0]) + ' -d <directory name> -t <timestamp> [ -a <action> ] instead')
 		sys.exit()
+
 
 
 	rma_occurrences = parse_trace_per_epoch(rma_all_calls)
