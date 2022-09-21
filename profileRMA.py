@@ -18,8 +18,6 @@ import pandas as pd
 
 import logging
 
-
-
 def set_log_level(option):
 
 	level=logging.INFO
@@ -75,6 +73,8 @@ def graph_per_call(totalRanks, perCallPerRankStatistics, perCallStatistics, rma_
 
 def print_per_call(totalRanks, perCallPerRankStatistics, perCallStatistics, rma_indexes):
 
+	# FIXME: correct/improve print-out
+
 	print('\t\t * * * PER RANK / PER RMA OP TYPE SUMMARY [ min  max  avg  std dev ] * * *')
 	print('\t MPI_Win_create \t|\t MPI_Get \t|\t MPI_Put \t|\t MPI_Acc \t|\t MPI_Win_fence \t|\t MPI_Win_free')
 	for i in range(0, totalRanks):
@@ -86,6 +86,9 @@ def print_per_call(totalRanks, perCallPerRankStatistics, perCallStatistics, rma_
 
 	graph_per_call(totalRanks, perCallPerRankStatistics, perCallStatistics, rma_indexes)
 
+def column(matrix, i):
+    return [row[i] for row in matrix]
+
 
 def produce_epoch_statistics(epochData):
 
@@ -93,7 +96,31 @@ def produce_epoch_statistics(epochData):
 		logging.debug('rma profiler: produce_epoch_statistics: Starting Epochs')
 	else:
 		logging.debug('rma profiler: produce_epoch_statistics: Creating epoch statistics . . .')
+		# print(epochData)
 
+
+def debug_epoch_statistics(epochData, fence_of_rank, fenceDiscrepancy):
+
+	if all(i is None for i in fence_of_rank):
+		logging.debug('rma profiler: produce_epoch_statistics: Starting Epochs')
+	else:
+		logging.debug('rma profiler: produce_epoch_statistics: Creating epoch statistics . . .')
+		# print(epochData)
+		if fence_of_rank[0]==[] and fence_of_rank[1]==[]:
+			print('No data')
+		else:
+			#print(f'rma profiler: produce_epoch_statistics: fences for round: {column(epochData, 0)}')
+			if column(fence_of_rank, 0)[0]!=column(fence_of_rank, 0)[1]:
+				#print(f'rma profiler: produce_epoch_statistics: fences for round: {column(epochData, 0)}')
+				print(column(fence_of_rank, 0))
+				print(epochData)
+				fenceDiscrepancy+=1
+	"""
+		print(epochData)
+		answer = input("Continue?").lower()
+		if answer!='y':
+			sys.exit(2)
+	"""
 
 def parse_trace_per_epoch(rma_tracked_calls):
 
@@ -142,6 +169,13 @@ def parse_trace_per_epoch(rma_tracked_calls):
 	filesFinished = np.full(totalRanks, False)
 
 	windows = set()
+
+	windows_per_rank = []
+	windows_per_rank.append(set())
+	windows_per_rank.append(set())
+
+	windows_in_fence = set()
+
 	communicators = set()
 
 	current_fence_data = 0
@@ -150,13 +184,26 @@ def parse_trace_per_epoch(rma_tracked_calls):
 	epochData = [[] for x in range(totalRanks)]
 	epochDataPerRank = []
 
+
+	fence_of_rank =[[] for x in range(totalRanks)]
+
+
 	logging.debug(f'rma profiler: parse_trace_per_epoch: epochData is {epochData}')
+
+	# temporary vals for rma op arguments parsed from file for each op
+	current_window =0 
+	current_call=None
+	start_cpu_time=0
+	end_cpu_time=0
+	current_datacnt=0
+	current_datatype=None
 
 	
 	while (not np.all(filesFinished)):
 		rank = 0 # will use this as index  to numpy arrays with statistics
 		
 		produce_epoch_statistics(epochData)
+		debug_epoch_statistics(epochData, fence_of_rank, fenceDiscrepancy)
 
 		epochData = [[] for x in range(totalRanks)]
 
@@ -208,6 +255,10 @@ def parse_trace_per_epoch(rma_tracked_calls):
 							if current_call in  ('MPI_Win_create', 'MPI_Accumulate', 'MPI_Get', 'MPI_Put'):
 								windows.add(current_window)
 
+								#
+								windows_per_rank[rank].add(current_window)
+								#
+
 							"""if current_call == "MPI_Win_create":
 								logging.debug(f'Rank {rank}: MPI_Win_create window {current_window}')
 							if current_call == "MPI_Win_free":
@@ -217,6 +268,15 @@ def parse_trace_per_epoch(rma_tracked_calls):
 							if current_call == "MPI_Win_fence":
 								logging.debug(f'rma profiler: parse_trace_per_epoch: Rank {rank}: MPI_Win_fence on window {current_window}')
 
+								#
+								windows_in_fence.add(current_window)
+								#
+
+						if 'origincount' in linesplit[1]:
+							current_datacnt = int((linesplit[1].split('='))[1])
+
+						if 'origintype' in linesplit[1]:
+							current_datatype = int((linesplit[1].split('='))[1])
 
 
 						if 'comm' in linesplit[1]:
@@ -231,9 +291,14 @@ def parse_trace_per_epoch(rma_tracked_calls):
 							current_duration_cpu = end_cpu_time - start_cpu_time
 
 
-							curr_op_data = [current_window, current_call, start_cpu_time]
+							# TODO: merge current_datacnt, current_datatype into total bytes transferred
+							# function converting datatype to bytes will be necessary
+							# check dumpi2ascii -X which prints out datatype sizes
+							curr_op_data = [current_window, current_call, start_cpu_time, end_cpu_time, current_datacnt, current_datatype]
 							logging.debug(f'rma profiler: parse_trace_per_epoch: curr_op_data: {curr_op_data}')
 							epochDataPerRank.append(curr_op_data)
+
+							fence_of_rank[rank] = curr_op_data
 
 							#logging.debug(rma_indexes[current_call])
 
@@ -281,7 +346,9 @@ def parse_trace_per_epoch(rma_tracked_calls):
 			epochs+=1
 
 	print(f'rma profiler: parse_trace_per_epoch:\tTotal epochs detected: {epochs-1}\n\t\t\t\t\tTotal windows detected: {len(windows)}\n\t\t\t\t\tTotal communicators detected: {len(communicators)}\n')
-
+	print(f'rma profiler: parse_trace_per_epoch: Windows per rank: {windows_per_rank}')
+	print(f'rma profiler: parse_trace_per_epoch: windows in fences: {windows_in_fence}')
+	print(f'rma profiler: parse_trace_per_epoch: fence discrepancies are : {fenceDiscrepancy}')
 	
 	# create summary per call and rank and per call in total
 	# calculates min, max, average (mean) and std deviation
@@ -428,6 +495,10 @@ def validate_count(call_count, rma_occurrences):
 def main():
 
 	global dirname, timestamp
+	global fenceDiscrepancy
+
+
+	fenceDiscrepancy=0
 
 	action = 'r'
 	cmdlnaction = False
