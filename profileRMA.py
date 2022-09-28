@@ -1,5 +1,20 @@
 #!/usr/bin/python3
 
+
+###################################################################################
+# RMA timing profiling using data from SST-Dumpi traces
+# 
+# In order to extract timing information from the traces, the following are assumed 
+# about the corresponding executions:
+#
+# - Synchronization is based on MPI_Win_fence. PSCW and locks are not supported. 
+# - Windows created by ranks belong to the same communicator. 
+# - RMA epochs on different windows may overlap.
+#
+###################################################################################
+
+
+
 import getopt 
 import sys 
 import glob, os
@@ -170,9 +185,9 @@ def parse_trace_per_epoch(rma_tracked_calls):
 
 	windows = set()
 
-	windows_per_rank = []
-	windows_per_rank.append(set())
-	windows_per_rank.append(set())
+	#windows_per_rank = []
+	#windows_per_rank.append(set())
+	#windows_per_rank.append(set())
 
 	windows_in_fence = set()
 
@@ -203,7 +218,7 @@ def parse_trace_per_epoch(rma_tracked_calls):
 		rank = 0 # will use this as index  to numpy arrays with statistics
 		
 		produce_epoch_statistics(epochData)
-		debug_epoch_statistics(epochData, fence_of_rank, fenceDiscrepancy)
+		#debug_epoch_statistics(epochData, fence_of_rank, fenceDiscrepancy)
 
 		epochData = [[] for x in range(totalRanks)]
 
@@ -256,7 +271,7 @@ def parse_trace_per_epoch(rma_tracked_calls):
 								windows.add(current_window)
 
 								#
-								windows_per_rank[rank].add(current_window)
+								#windows_per_rank[rank].add(current_window)
 								#
 
 							"""if current_call == "MPI_Win_create":
@@ -341,12 +356,13 @@ def parse_trace_per_epoch(rma_tracked_calls):
 					#if(current_call == 'MPI_Win_fence'): # if the last rank has a finished file, the epoch does not get counted!
 
 		if rank == totalRanks:
-			logging.debug(f'rma profiler: parse_trace_per_epoch: -> Finished epoch: {epochs}')
-			epochDataPerRank.append(current_fence_data)
-			epochs+=1
+			if current_call=='MPI_Win_fence':
+				logging.debug(f'rma profiler: parse_trace_per_epoch: -> Finished epoch: {epochs}')
+				epochDataPerRank.append(current_fence_data)
+				epochs+=1
 
 	print(f'rma profiler: parse_trace_per_epoch:\tTotal epochs detected: {epochs-1}\n\t\t\t\t\tTotal windows detected: {len(windows)}\n\t\t\t\t\tTotal communicators detected: {len(communicators)}\n')
-	print(f'rma profiler: parse_trace_per_epoch: Windows per rank: {windows_per_rank}')
+	#print(f'rma profiler: parse_trace_per_epoch: Windows per rank: {windows_per_rank}')
 	print(f'rma profiler: parse_trace_per_epoch: windows in fences: {windows_in_fence}')
 	print(f'rma profiler: parse_trace_per_epoch: fence discrepancies are : {fenceDiscrepancy}')
 	
