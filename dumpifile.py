@@ -35,6 +35,9 @@ import logging
 
 from pydumpi import DumpiTrace
 
+from ctypes.util import find_library
+
+
 
 rma_tracked_calls = ['MPI_Win_create', 'MPI_Get', 'MPI_Put', 'MPI_Accumulate', 'MPI_Win_free', 'MPI_Win_fence']
 
@@ -65,28 +68,56 @@ def set_log_level(option):
 
 class MyTrace(DumpiTrace):
 
-    def __init__(self, file_name):
-        super().__init__(file_name)
-        self.message_count = 0
-        self.fence_count = 0
+	def __init__(self, file_name):
+		super().__init__(file_name)
+		self.message_count = 0
+		self.fence_count = 0
+		self.win_count = 0
+		self.windows = []
 
-    def on_send(self, data, thread, cpu_time, wall_time, perf_info):
-        self.message_count += 1
-        time_diff = wall_time.stop - wall_time.start
-        # print(f"Time elapsed in 'MPI_Send': {time_diff.to_ms()} milliseconds.")
+	def on_send(self, data, thread, cpu_time, wall_time, perf_info):
+		self.message_count += 1
+		time_diff = wall_time.stop - wall_time.start
 
-    #def on_recv(self, data, thread, cpu_time, wall_time, perf_info):
-        # print(f"Message received on thread '{thread}' from thread '{data.source}'.")
+	def on_win_fence(self, data, thread, cpu_time, wall_time, perf_info):
+		time_diff = wall_time.stop - wall_time.start
+		self.fence_count += 1
+		print(f'win fence on window {data.win}')
+
+	def on_win_create(self, data, thread, cpu_time, wall_time, perf_info):
+		time_diff = wall_time.stop - wall_time.start
+		self.win_count += 1
+		# check out file dumpi/common/argtypes.h, typedef struct dumpi_win_create
+		print(data.win)
+		print(data.size)
+		self.windows.append((data.win, data.size))
+
+	def on_get(self, data, thread, cpu_time, wall_time, perf_info):
+		time_diff = wall_time.stop - wall_time.start
+		print(f'on_get window: {data.win}')
+		# when in doubt, check out pydumpi/dtypes.py
+		print(f'on_get count: {data.origincount}')
+		print(f'on_get data type: {data.origintype}')
+
+	def on_get(self, data, thread, cpu_time, wall_time, perf_info):
+		time_diff = wall_time.stop - wall_time.start
+		print(f'on_put window: {data.win}')
+		# when in doubt, check out pydumpi/dtypes.py
+		print(f'on_put count: {data.origincount}')
+		print(f'on_put data type: {data.origintype}')
 
 
-    def on_win_fence(self, data, thread, cpu_time, wall_time, perf_info):
-        time_diff = wall_time.stop - wall_time.start
-        self.fence_count += 1
-        # print(f"MPI_Win_fence on thread '{thread}' lasting '{time_diff.to_ms()} milliseconds.'.")
-
+	def on_accumulate(self, data, thread, cpu_time, wall_time, perf_info):
+		time_diff = wall_time.stop - wall_time.start
+		print(f'on_acc window: {data.win}')
+		# when in doubt, check out pydumpi/dtypes.py
+		print(f'on_acc count: {data.origincount}')
+		print(f'on_acc data type: {data.origintype}')
 
 
 def parse_traces():
+
+
 
 	rma_set = frozenset(rma_tracked_calls)
 	
@@ -113,18 +144,20 @@ def parse_traces():
 	totalCallTypes = len(rma_tracked_calls)
 
 
+	windows = [None for x in range(totalRanks)]
+
+	rank = 0
+
 	for tracefile in ordered_files:
 
 	    with MyTrace(tracefile) as trace:
-	        #trace.print_header()
-	        #trace.print_footer()
-
 	        print(f'now reading {tracefile}')
-
 	        trace.read_stream()
+	        windows[rank] = (trace.windows)
 
 	        print(trace.fence_count)
-
+	        print(windows)
+	        rank+=1
 
 
 
@@ -145,7 +178,6 @@ def main():
 	# Get the arguments from the command-line except the filename
 	argv = sys.argv[1:]
 
-	# from https://www.datacamp.com/community/tutorials/argument-parsing-in-python
 
 	try: 
 		if len(argv) < 4 or len(argv) > 8:
