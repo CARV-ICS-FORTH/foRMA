@@ -152,8 +152,8 @@ class MyTrace(DumpiTrace):
 		#print(f'on_get count: {data.origincount}')
 		#print(f'on_get data type: {data.origintype}')
 		#print(f'on_get size in bytes: {data.origincount*self.type_sizes[data.origintype]}')
-		self.windows[data.win][2][self.windows[data.win][1]]+=data.origincount*self.type_sizes[data.origintype]
-		#self.windows[win_id][2][self.windows[win_id][1]]+=data.origincount*self.type_sizes[data.origintype]
+		#self.windows[data.win][2][self.windows[data.win][1]]+=data.origincount*self.type_sizes[data.origintype]
+		self.windows[win_id][2][self.windows[win_id][1]]+=data.origincount*self.type_sizes[data.origintype]
 
 
 	def on_put(self, data, thread, cpu_time, wall_time, perf_info):
@@ -164,8 +164,8 @@ class MyTrace(DumpiTrace):
 		#print(f'on_put count: {data.origincount}')
 		#print(f'on_put data type: {data.origintype}')
 		#print(f'on_put size in bytes: {data.origincount*self.type_sizes[data.origintype]}')
-		self.windows[data.win][2][self.windows[data.win][1]]+=data.origincount*self.type_sizes[data.origintype]
-		#self.windows[win_id][2][self.windows[win_id][1]]+=data.origincount*self.type_sizes[data.origintype]
+		#self.windows[data.win][2][self.windows[data.win][1]]+=data.origincount*self.type_sizes[data.origintype]
+		self.windows[win_id][2][self.windows[win_id][1]]+=data.origincount*self.type_sizes[data.origintype]
 
 
 	def on_accumulate(self, data, thread, cpu_time, wall_time, perf_info):
@@ -218,28 +218,41 @@ def parse_traces():
 
 	for tracefile in ordered_files:
 
-	    with MyTrace(tracefile) as trace:
-	    	## keeping next line in order to remember where to find sizes in -- check pydumpi/undumpi.py
-	        print(f'now reading {tracefile}.')
-	        trace.read_stream()
-	        windows[rank] = (trace.windows)
+		with MyTrace(tracefile) as trace:
+			## keeping next line in order to remember where to find sizes in -- check pydumpi/undumpi.py
 
-	        print(f'Fence count for rank {rank} is: {trace.fence_count}')
-	        print(f'Win_create occurrences for rank {rank} is: {trace.wincreate_count}')
+			print(f'now reading {tracefile}.')
+			trace.read_stream()
+			windows[rank] = (trace.windows)
 
-	        #print(f'Different win IDs for rank {rank} is: {len(trace.windows)}')
-	        #print(f'Win IDs for rank {rank} are: {(trace.windows).keys()}')
+			print(f'Fence count for rank {rank} is: {trace.fence_count}')
+			print(f'Win_create occurrences for rank {rank} is: {trace.wincreate_count}')
+
+			#print(f'Different win IDs for rank {rank} is: {len(trace.windows)}')
+			#print(f'Win IDs for rank {rank} are: {(trace.windows).keys()}')
+
+			## add up window bytes moved per epoch and total
+			if rank == 0:
+				windowsums = trace.windows
+			else:
+				for winids, values in (trace.windows).items():
+					windowsums[winids][2] = [a+b for a, b in zip(windowsums[winids][2], values[2])]
+			
+
+			"""
+			for key, value in (trace.windows).items():
+				if (value[2])[-1] != 0:
+					print(f'rank {rank} - window is {key}, value is {value}')
+			"""
+			#print(windows)
+			rank+=1
+
+	for key, value in (windowsums).items():
+		#if (value[2])[-1] != 0:
+		print(f'rank {rank} - window is {key}, value is {value}')
 
 
-
-
-	        #print(windows)
-	        rank+=1
-
-
-
-
-
+	"""
 	length = len(windows[0])
 	prev_fences = 0
 	for win in range(length):
@@ -252,13 +265,13 @@ def parse_traces():
 			prev_rank_val = windows[rank][win+1][0]
 
 			
-			"""
+			
 			if rank == 0:
 				if prev_fences != windows[rank][win+1][1]:
 					print(f'rank {rank}: epochs differ between windows {win} ({prev_fences}) and {win+1} ({windows[rank][win+1][1]})')
 			prev_fences = windows[rank][win+1][1]
-			"""
-
+			
+	"""
 
 
 def main():
