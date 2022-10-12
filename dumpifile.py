@@ -70,6 +70,37 @@ def set_log_level(option):
 
 
 
+
+def calculate_basic_trace_stats(prev_stats, curr_duration):
+
+	## for each op, I keep tabs on min [0] max [1] sum of durations [2] sum of squares for std-dev [3] op count [4]
+	stats = [0 for x in range(5)]
+
+
+	## set minimum
+	if prev_stats[0]==0:
+		stats[0]=curr_duration
+	else:
+		if prev_stats[0] > curr_duration:
+			stats[0] = curr_duration
+
+	## set maximum
+	if prev_stats[1] < curr_duration:
+		stats[1] = curr_duration
+
+	## set sum
+	stats[2] = prev_stats[2] + curr_duration
+
+	## set sum of squares for std dev
+	stats[3] = prev_stats[3] + curr_duration**2
+
+	## counting occurrences of op
+	stats[4] = prev_stats[4] + 1
+
+	return stats
+
+
+
 class MyTrace(DumpiTrace):
 
 	def __init__(self, file_name):
@@ -80,6 +111,13 @@ class MyTrace(DumpiTrace):
 		self.wincreate_count = 0
 		self.windows = dict()
 		self.wintb = dict()
+		
+		## for each op, I keep tabs on min [0] max [1] sum of durations [2] sum of squares for std-dev [3] op count [4]
+		self.gets = [0 for x in range(5)]
+		self.puts = [0 for x in range(5)]
+		self.accs = [0 for x in range(5)]
+		
+
 
 
 
@@ -155,6 +193,30 @@ class MyTrace(DumpiTrace):
 		#self.windows[data.win][2][self.windows[data.win][1]]+=data.origincount*self.type_sizes[data.origintype]
 		self.windows[win_id][2][self.windows[win_id][1]]+=data.origincount*self.type_sizes[data.origintype]
 
+		"""
+		## set minimum
+		if self.gets[0]==0:
+			self.gets[0]=time_diff.to_ns()
+		else:
+			if self.gets[0] > time_diff.to_ns():
+				self.gets[0] = time_diff.to_ns()
+
+		## set maximum
+		if self.gets[1] < time_diff.to_ns():
+			self.gets[1] = time_diff.to_ns()
+
+		## set sum
+		self.gets[2] += time_diff.to_ns()
+
+		## set sum of squares for std dev
+		self.gets[3] += time_diff.to_ns()**2
+
+		## counting occurrences of op
+		self.gets[4] += 1
+		"""
+
+		self.gets = calculate_basic_trace_stats(self.gets, time_diff.to_ns())
+
 
 	def on_put(self, data, thread, cpu_time, wall_time, perf_info):
 		time_diff = wall_time.stop - wall_time.start
@@ -167,6 +229,9 @@ class MyTrace(DumpiTrace):
 		#self.windows[data.win][2][self.windows[data.win][1]]+=data.origincount*self.type_sizes[data.origintype]
 		self.windows[win_id][2][self.windows[win_id][1]]+=data.origincount*self.type_sizes[data.origintype]
 
+		#(self.puts).append(time_diff)
+
+		self.puts = calculate_basic_trace_stats(self.puts, time_diff.to_ns())
 
 	def on_accumulate(self, data, thread, cpu_time, wall_time, perf_info):
 		time_diff = wall_time.stop - wall_time.start
@@ -180,6 +245,9 @@ class MyTrace(DumpiTrace):
 		#self.windows[data.win][2][self.windows[data.win][1]]+=data.origincount*self.type_sizes[data.origintype]
 		self.windows[win_id][2][self.windows[win_id][1]]+=data.origincount*self.type_sizes[data.origintype]
 
+		#(self.accs).append(time_diff)
+
+		self.accs = calculate_basic_trace_stats(self.accs, time_diff.to_ns())
 
 def parse_traces():
 
@@ -213,6 +281,9 @@ def parse_traces():
 	windows = [None for x in range(totalRanks)]
 	windowsums = [None for x in range(totalRanks)]
 
+	get_stats_per_rank = []
+	put_stats_per_rank = []
+	acc_stats_per_rank = []
 
 	rank = 0
 
@@ -238,20 +309,46 @@ def parse_traces():
 				for winids, values in (trace.windows).items():
 					windowsums[winids][2] = [a+b for a, b in zip(windowsums[winids][2], values[2])]
 			
-
+			get_stats_per_rank.append(trace.gets)
+			put_stats_per_rank.append(trace.puts)
+			acc_stats_per_rank.append(trace.accs)
+			
+			#total_puts.append(trace.puts)
+			#total_accs.append(trace.accs)
 			"""
 			for key, value in (trace.windows).items():
 				if (value[2])[-1] != 0:
 					print(f'rank {rank} - window is {key}, value is {value}')
 			"""
 			#print(windows)
+
 			rank+=1
 
 	for key, value in (windowsums).items():
 		#if (value[2])[-1] != 0:
+		windowsums[key][2][-1] = sum(windowsums[key][2])
 		print(f'rank {rank} - window is {key}, value is {value}')
 
+	getsum = 0
+	for i in range(len(get_stats_per_rank)):
+		getsum+=get_stats_per_rank[i][4]
+	print(f'Total MPI_get in execution: {getsum}')
+	
+	putsum = 0
+	for i in range(len(put_stats_per_rank)):
+		putsum+=put_stats_per_rank[i][4]
+	print(f'Total MPI_Put in execution: {putsum}')
+	
+	accsum = 0
+	for i in range(len(acc_stats_per_rank)):
+		accsum+=acc_stats_per_rank[i][4]
+	print(f'Total MPI_Accumulate in execution: {accsum}')
 
+	print('Total time spent in MPI_Acc calls:')
+	for i in range(totalRanks):
+		print(f'Rank {i}: {acc_stats_per_rank[i][2]}')
+
+	
 	"""
 	length = len(windows[0])
 	prev_fences = 0
