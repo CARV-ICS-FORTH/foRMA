@@ -29,6 +29,8 @@ import collections
 import subprocess
 import math
 
+import gc
+
 from bisect import insort
 
 import matplotlib.pyplot as plt
@@ -109,8 +111,18 @@ class MyTrace(DumpiTrace):
 		self.fence_count = 0
 		self.win_count = 0
 		self.wincreate_count = 0
-		self.windows = dict()
+
+		## DataVolumes per epoch per detected window for current trace. 
+		## indexed by window ID (cf. window lookaside translation buffer wintb)
+		self.dv_perEpoch_perWindow = dict()
 		self.wintb = dict()
+
+		## Operations per epoch per detected window for current trace.
+		## each element is a list of operation data. 
+		## each operation data is comprised of: type, start time (wall), (possibly # of bytes if I remove dv_perEpoch_perWindow)
+		## last operation of the list is a fence, where data is comprised of: type, start time (wall), end time (wall)
+		self.ops_perEpoch_perWindow = dict()
+
 		
 		## for each op, I keep tabs on min [0] max [1] sum of durations [2] sum of squares for std-dev [3] op count [4]
 		self.gets = [0 for x in range(5)]
@@ -129,26 +141,31 @@ class MyTrace(DumpiTrace):
 		## identify window key to use on windows dictionary by looking into wintb
 		win_id = self.wintb[data.win]
 
-		## elements of self.windows[data.win] (value) are: window size [0], current window epoch [1], list of bytes moved per epoch [2]
+		## elements of self.dv_perEpoch_perWindow[data.win] (value) are: window size [0], current window epoch [1], list of bytes moved per epoch [2]
 
 		## increase epoch count on corresponding window
 		## first fence ever on 
-		# self.windows[data.win][1]+=1
-		self.windows[win_id][1] += 1
+		# self.dv_perEpoch_perWindow[data.win][1]+=1
+		self.dv_perEpoch_perWindow[win_id][1] += 1
 
-		"""if (self.windows[data.win][1]>0):
-			print(f'win fence on window {data.win}: Fence count is {self.fence_count} | Epoch (completed) count on window is {self.windows[data.win][1]}')
-			print(f'curren data volumes per epoch are: {self.windows[data.win]}')"""
+		"""if (self.dv_perEpoch_perWindow[data.win][1]>0):
+			print(f'win fence on window {data.win}: Fence count is {self.fence_count} | Epoch (completed) count on window is {self.dv_perEpoch_perWindow[data.win][1]}')
+			print(f'curren data volumes per epoch are: {self.dv_perEpoch_perWindow[data.win]}')"""
 
 		## prepare dictionary for next iteration. i.e.:
 		## add a zero element to list of bytes moved per epoch in order to save on a check on whether that epoch exists later on (in on_get, on_put, for ex.)
-		# if (self.windows[data.win][1]>-1): ## epoch count in self.windows[data.win][1] has already been incremented, so the >-1 check is correct
-		if (self.windows[win_id][1]>-1): 
-			# self.windows[data.win][2].append(0)
-			self.windows[win_id][2].append(0)
+		# if (self.dv_perEpoch_perWindow[data.win][1]>-1): ## epoch count in self.dv_perEpoch_perWindow[data.win][1] has already been incremented, so the >-1 check is correct
+		if (self.dv_perEpoch_perWindow[win_id][1]>-1): 
+			# self.dv_perEpoch_perWindow[data.win][2].append(0)
+			self.dv_perEpoch_perWindow[win_id][2].append(0)
+			self.ops_perEpoch_perWindow[win_id].append([])
+
+			if (self.dv_perEpoch_perWindow[win_id][1]>0): 
+				self.ops_perEpoch_perWindow[win_id][self.dv_perEpoch_perWindow[win_id][1]-1].append(["fence", cpu_time.start.to_ns(), cpu_time.stop.to_ns()])
+
 			# since I have no way of knowing whether the current fence call is the last one in the execution, 
 			# there will always be a last, 0-value field in this list. so, the length of the list is epoch#+1
-		#print(f'window {data.win} : current data volumes per epoch are: {self.windows[data.win]}')
+		#print(f'window {data.win} : current data volumes per epoch are: {self.dv_perEpoch_perWindow[data.win]}')
 
 	def on_win_create(self, data, thread, cpu_time, wall_time, perf_info):
 		time_diff = wall_time.stop - wall_time.start
@@ -174,10 +191,12 @@ class MyTrace(DumpiTrace):
 		#print(data.win)
 		#print(data.size)
 
-		# elements of self.windows[data.win] (value) are: window size, current window epoch, list of bytes moved per epoch
+		# elements of self.dv_perEpoch_perWindow[data.win] (value) are: window size, current window epoch, list of bytes moved per epoch
 		# initializing data volume of first epoch to zero anyway
-		#self.windows[data.win] = [data.size, -1, []]
-		self.windows[self.wintb[data.win]] = [data.size, -1, []]
+		#self.dv_perEpoch_perWindow[data.win] = [data.size, -1, []]
+		self.dv_perEpoch_perWindow[self.wintb[data.win]] = [data.size, -1, []]
+
+		self.ops_perEpoch_perWindow[self.wintb[data.win]] = []
 
 	def on_win_free(self, data, thread, cpu_time, wall_time, perf_info):
 		self.wintb[data.win] = -1
@@ -190,8 +209,12 @@ class MyTrace(DumpiTrace):
 		#print(f'on_get count: {data.origincount}')
 		#print(f'on_get data type: {data.origintype}')
 		#print(f'on_get size in bytes: {data.origincount*self.type_sizes[data.origintype]}')
-		#self.windows[data.win][2][self.windows[data.win][1]]+=data.origincount*self.type_sizes[data.origintype]
-		self.windows[win_id][2][self.windows[win_id][1]]+=data.origincount*self.type_sizes[data.origintype]
+		#self.dv_perEpoch_perWindow[data.win][2][self.dv_perEpoch_perWindow[data.win][1]]+=data.origincount*self.type_sizes[data.origintype]
+		self.dv_perEpoch_perWindow[win_id][2][self.dv_perEpoch_perWindow[win_id][1]]+=data.origincount*self.type_sizes[data.origintype]
+
+		## add op data for DT bound calculations
+		## TODO!!! Fix data volume!!! multiply with type
+		self.ops_perEpoch_perWindow[win_id][self.dv_perEpoch_perWindow[win_id][1]].append(["get", cpu_time.start.to_ns(), data.origincount])
 
 		"""
 		## set minimum
@@ -226,8 +249,12 @@ class MyTrace(DumpiTrace):
 		#print(f'on_put count: {data.origincount}')
 		#print(f'on_put data type: {data.origintype}')
 		#print(f'on_put size in bytes: {data.origincount*self.type_sizes[data.origintype]}')
-		#self.windows[data.win][2][self.windows[data.win][1]]+=data.origincount*self.type_sizes[data.origintype]
-		self.windows[win_id][2][self.windows[win_id][1]]+=data.origincount*self.type_sizes[data.origintype]
+		#self.dv_perEpoch_perWindow[data.win][2][self.dv_perEpoch_perWindow[data.win][1]]+=data.origincount*self.type_sizes[data.origintype]
+		self.dv_perEpoch_perWindow[win_id][2][self.dv_perEpoch_perWindow[win_id][1]]+=data.origincount*self.type_sizes[data.origintype]
+
+		## add op data for DT bound calculations
+		## TODO!!! Fix data volume!!! multiply with type
+		self.ops_perEpoch_perWindow[win_id][self.dv_perEpoch_perWindow[win_id][1]].append(["put", cpu_time.start.to_ns(), data.origincount])
 
 		#(self.puts).append(time_diff)
 
@@ -242,8 +269,12 @@ class MyTrace(DumpiTrace):
 		#print(f'on_acc data type: {data.origintype}')
 
 		## TODO: refine this callback, depending on acc operation and transfer direction... :/
-		#self.windows[data.win][2][self.windows[data.win][1]]+=data.origincount*self.type_sizes[data.origintype]
-		self.windows[win_id][2][self.windows[win_id][1]]+=data.origincount*self.type_sizes[data.origintype]
+		#self.dv_perEpoch_perWindow[data.win][2][self.dv_perEpoch_perWindow[data.win][1]]+=data.origincount*self.type_sizes[data.origintype]
+		self.dv_perEpoch_perWindow[win_id][2][self.dv_perEpoch_perWindow[win_id][1]]+=data.origincount*self.type_sizes[data.origintype]
+
+		## add op data for DT bound calculations
+		## TODO!!! Fix data volume!!! multiply with type
+		self.ops_perEpoch_perWindow[win_id][self.dv_perEpoch_perWindow[win_id][1]].append(["acc", cpu_time.start.to_ns(), data.origincount])
 
 		#(self.accs).append(time_diff)
 
@@ -278,12 +309,14 @@ def parse_traces():
 	totalCallTypes = len(rma_tracked_calls)
 
 
-	windows = [None for x in range(totalRanks)]
+	dv_perEpoch_perWindow = [None for x in range(totalRanks)]
 	windowsums = [None for x in range(totalRanks)]
 
 	get_stats_per_rank = []
 	put_stats_per_rank = []
 	acc_stats_per_rank = []
+
+	ops_per_epoch_per_rank = []
 
 	rank = 0
 
@@ -294,33 +327,48 @@ def parse_traces():
 
 			print(f'now reading {tracefile}.')
 			trace.read_stream()
-			windows[rank] = (trace.windows)
+			dv_perEpoch_perWindow[rank] = (trace.dv_perEpoch_perWindow)
 
 			print(f'Fence count for rank {rank} is: {trace.fence_count}')
 			print(f'Win_create occurrences for rank {rank} is: {trace.wincreate_count}')
 
-			#print(f'Different win IDs for rank {rank} is: {len(trace.windows)}')
-			#print(f'Win IDs for rank {rank} are: {(trace.windows).keys()}')
+			print(f'Ops per epoch per window for rank {rank} is:')
+
+			for winids, values in (trace.ops_perEpoch_perWindow).items():
+				print(f'Data for window {winids}:')
+				for epochs, ops in enumerate(values):
+					print(f'Epoch {epochs} operations are: {ops}')
+
+			#print(f'Different win IDs for rank {rank} is: {len(trace.dv_perEpoch_perWindow)}')
+			#print(f'Win IDs for rank {rank} are: {(trace.dv_perEpoch_perWindow).keys()}')
 
 			## add up window bytes moved per epoch and total
 			if rank == 0:
-				windowsums = trace.windows
+				windowsums = trace.dv_perEpoch_perWindow
 			else:
-				for winids, values in (trace.windows).items():
+				for winids, values in (trace.dv_perEpoch_perWindow).items():
 					windowsums[winids][2] = [a+b for a, b in zip(windowsums[winids][2], values[2])]
 			
 			get_stats_per_rank.append(trace.gets)
 			put_stats_per_rank.append(trace.puts)
 			acc_stats_per_rank.append(trace.accs)
+
+			ops_per_epoch_per_rank.append(trace.ops_perEpoch_perWindow)
+
+			del trace.gets
+			del trace.puts
+			del trace.accs
+			del trace.ops_perEpoch_perWindow
+			gc.collect()
 			
 			#total_puts.append(trace.puts)
 			#total_accs.append(trace.accs)
 			"""
-			for key, value in (trace.windows).items():
+			for key, value in (trace.dv_perEpoch_perWindow).items():
 				if (value[2])[-1] != 0:
 					print(f'rank {rank} - window is {key}, value is {value}')
 			"""
-			#print(windows)
+			#print(dv_perEpoch_perWindow)
 
 			rank+=1
 
