@@ -24,43 +24,48 @@ import sys
 import glob, os
 import re
 import fnmatch
-import numpy as np
-import collections
-import subprocess
-import math
-import pandas as pd
 
-import gc
-
-from bisect import insort
-
-import matplotlib.pyplot as plt
-
-import pandas as pd
 
 import logging
 
 from pydumpi import DumpiTrace
 
-from ctypes.util import find_library
 
 import forma_trace as ft
 
 
-def parse_traces(tracefiles):
+def forma_parse_traces(tracefiles):
 
 	rank = 0
+	opdata_per_rank = []
+	total_exec_time_per_rank = []
 
 	for tracefile in tracefiles:
-		with ft.FormaTrace(tracefile, []) as trace:
+		with ft.FormaIMTrace(tracefile) as trace:
 			## keeping next line in order to remember where to find sizes in -- check pydumpi/undumpi.py
 
 			print(f'now reading {tracefile}.')
 			trace.read_stream()
-			#dv_perEpoch_perWindow[rank] = (trace.dv_perEpoch_perWindow)
-
 			print(f'Fence count for rank {rank} is: {trace.fence_count}')
-			print(f'Win_create occurrences for rank {rank} is: {trace.wincreate_count}')
 		rank += 1
+		opdata_per_rank.append(trace.opdata_per_window)
+		total_exec_time_per_rank.append(trace.total_exec_time)
 
-	return trace.wincreate_count
+	return rank, trace.win_count, opdata_per_rank, total_exec_time_per_rank
+
+
+
+def forma_calculate_dt_bounds(ranks, wins, opdata_per_rank):
+
+	print('Calculating data transfer bounds in execution...')
+
+	for i in range(ranks): # rank
+		print(f'rank {i} out of {ranks}')
+		for j in range(wins): # window
+			print(f'\twindow {j} out of {wins}')
+			for k in range(len(opdata_per_rank[i][j])-1): # epoch
+				print(f'\t\tepoch {k} out of {len(opdata_per_rank[i][j])-1}')
+				for l in range(len(opdata_per_rank[i][j][k])-1): # operation, except fence
+					print(f'\t\t\toperation {l} out of {len(opdata_per_rank[i][j][k])}')
+					opdata_per_rank[i][j][k][l][4] = opdata_per_rank[i][j][k][-1][2] - opdata_per_rank[i][j][k][l][1]
+	return True

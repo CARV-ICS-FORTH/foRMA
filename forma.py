@@ -24,24 +24,12 @@ import sys
 import glob, os
 import re
 import fnmatch
-import numpy as np
-import collections
-import subprocess
-import math
 
-import gc
-
-from bisect import insort
-
-import matplotlib.pyplot as plt
-
-import pandas as pd
 
 import logging
 
 from pydumpi import DumpiTrace
-
-from ctypes.util import find_library
+from pydumpi import util
 
 import forma_trace as ft
 import forma_parse as fp
@@ -71,6 +59,9 @@ def check_filepaths(dirname, timestamp):
 	#print(ordered_files)
 	total_file_size = total_file_size/1024
 
+	## Read metafile and print it -- TODO: to be used more extensively later
+	metafile = util.read_meta_file(str(dirname)+'/dumpi-'+format(str(timestamp))+'.meta')
+
 	print(f'\nAbout to parse a total of {round(total_file_size)} KBytes of binary trace files size.\n')
 
 	return(ordered_files)
@@ -81,7 +72,7 @@ def check_mem_capacity(tracefiles, rma_tracked_calls):
 	total_rma_occurrences = 0
 
 	for tf in tracefiles:
-		with ft.FormaTrace(tf, []) as trace:
+		with ft.FormaIMTrace(tf) as trace:
 			print(f'Reading footer of {tf}.')
 			fcalls, icalls = trace.read_footer()
 			for name, count in fcalls.items():
@@ -97,6 +88,26 @@ def check_mem_capacity(tracefiles, rma_tracked_calls):
 		return True
 	else:
 		return False
+
+
+def check_consistency(ranks, wins, opdata_per_rank):
+
+	print("Performing a format sanity check on extracted trace data...")
+
+	if len(opdata_per_rank) != ranks:
+		return 1
+	else:
+		for i in range(ranks):
+			if len(opdata_per_rank[i]) != wins:
+				return 2
+		for j in range(wins):
+			epoch_cnt = len(opdata_per_rank[0][j])
+			for i in range(ranks):
+				if len(opdata_per_rank[j][j]) != epoch_cnt:
+					return 3
+	
+	print("Sanity check ok.\n")
+	return 0
 
 
 
@@ -127,9 +138,6 @@ def set_log_level(option):
 def main():
 
 	global dirname, timestamp
-	global fenceDiscrepancy
-
-	fenceDiscrepancy=0
 
 	action = 'r'
 	cmdlnaction = False
@@ -179,6 +187,9 @@ def main():
 		print ('Exception: wrong usage. Use  ' + str(sys.argv[0]) + ' -d <directory name> -t <timestamp> [ -a <action> ] instead')
 		sys.exit()
 
+
+	print('\nfoRMA - RMA timing profiling. Preparing analysis of trace.')
+
 	tracefiles = check_filepaths(dirname, timestamp)
 
 	if version=='m':
@@ -187,18 +198,36 @@ def main():
 			sys.exit(2)
 
 
+	print('foRMA - RMA timing profiling. Preparing analysis of trace.')
+
 	## adjust log level to command line option
 	#logging.basicConfig(level=logging.INFO)
 	logging.basicConfig(level=level)
 
-	total_wins = fp.parse_traces(tracefiles)
+	ranks, wins, opdata_per_rank, total_exec_times_per_rank = fp.forma_parse_traces(tracefiles)
 
-	winsummary = [total_wins, min_win_size, max_win_size, avg_vol, avg_epoch]
-	getsummary = [0 for x in range(5)]
-	putsummary = [0 for x in range(5)]
-	accsummary = [0 for x in range(5)]
+	print(f'{ranks} ranks, {wins} memory windows in execution.')
+	
+	sanity_check = check_consistency(ranks, wins, opdata_per_rank)
+	if sanity_check != 0:
+		print(f'Warning: the present version of foRMA is intended for applications with fence-based synchronization. Detected inconsistency in the provided traces.\nTotal ranks: {ranks}')
+		if sanity_check == 1:
+			print("Inconsistency between provided trace files and number of ranks in application.\n")
+		elif sanity_check == 2:
+			print("Inconsistency in nr of windows per communicator per rank.\n")
+		elif sanity_check == 3:
+			print("Inconsisten nr of epochs per window across ranks.\n")
+		sys.exit(2)
 
-	fo.forma_print_console_summary(winsummary, getsummary, putsummary, accsummary)
+	fp.forma_calculate_dt_bounds(ranks, wins, opdata_per_rank)
+
+	for i in range(ranks):
+		print(f'opdata for RANK {i}')
+		fo.forma_print_rank_ops_per_window(wins, opdata_per_rank[i])
+
+	fo.forma_print_stats_summary(ranks, wins)
+	fo.forma_print_stats_to_files(ranks, wins)
+
 
 
 
