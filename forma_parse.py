@@ -59,6 +59,8 @@ def forma_calculate_dt_bounds(ranks, wins, opdata_per_rank):
 
 	print('Calculating data transfer bounds in execution...')
 
+	print(opdata_per_rank)
+
 	for i in range(ranks): # rank
 		print(f'rank {i} out of {ranks}')
 		for j in range(wins): # window
@@ -66,6 +68,6 @@ def forma_calculate_dt_bounds(ranks, wins, opdata_per_rank):
 			for k in range(len(opdata_per_rank[i][j])-1): # epoch
 				print(f'\t\tepoch {k} out of {len(opdata_per_rank[i][j])-1}')
 				for l in range(len(opdata_per_rank[i][j][k])-1): # operation, except fence
-					print(f'\t\t\toperation {l} out of {len(opdata_per_rank[i][j][k])}')
 					opdata_per_rank[i][j][k][l][4] = opdata_per_rank[i][j][k][-1][2] - opdata_per_rank[i][j][k][l][1]
+					print(f'\t\t\toperation {l} out of {len(opdata_per_rank[i][j][k])}')
 	return True

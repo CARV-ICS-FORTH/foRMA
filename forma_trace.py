@@ -57,16 +57,16 @@ class FormaIMTrace(DumpiTrace):
 		win_id = self.wintb[data.win]
 		opdata = ['f', wall_time.start.to_ns(), cpu_time.stop.to_ns(), cpu_duration]
 		
-		## increase epoch count on corresponding window
-		## first fence ever on 
-		self.epochcount_per_window[win_id]+=1
-
 
 		## log opdata into corresponding list entry in self.opdata_per_window
 		self.opdata_per_window[win_id].append([])
 		win_epoch = self.epochcount_per_window[win_id]
-		if (win_epoch>0): 
-			self.opdata_per_window[win_id][win_epoch-1].append(opdata)
+		if (win_epoch>-1): 
+			self.opdata_per_window[win_id][win_epoch].append(opdata)
+
+		## increase epoch count on corresponding window
+		## first fence ever on 
+		self.epochcount_per_window[win_id]+=1
 
 
 	def on_win_create(self, data, thread, cpu_time, wall_time, perf_info):
@@ -108,7 +108,7 @@ class FormaIMTrace(DumpiTrace):
 		# opdata = ['g', wall_time.start.to_ns(), cpu_duration, data.origincount*self.type_sizes[data.origintype], 0]
 		opdata = ['g', cpu_time.start.to_ns(), cpu_duration, data.origincount*self.type_sizes[data.origintype], 0]
 		win_epoch = self.epochcount_per_window[win_id]
-		self.opdata_per_window[win_id][win_epoch-1].append(opdata)
+		self.opdata_per_window[win_id][win_epoch].append(opdata)
 
 	def on_put(self, data, thread, cpu_time, wall_time, perf_info):
 		#time_diff = wall_time.stop - wall_time.start
@@ -117,7 +117,7 @@ class FormaIMTrace(DumpiTrace):
 		# opdata = ['p', wall_time.start.to_ns(), cpu_duration, data.origincount*self.type_sizes[data.origintype], 0]
 		opdata = ['p', cpu_time.start.to_ns(), cpu_duration, data.origincount*self.type_sizes[data.origintype], 0]
 		win_epoch = self.epochcount_per_window[win_id]
-		self.opdata_per_window[win_id][win_epoch-1].append(opdata)
+		self.opdata_per_window[win_id][win_epoch].append(opdata)
 
 	def on_accumulate(self, data, thread, cpu_time, wall_time, perf_info):
 		#time_diff = wall_time.stop - wall_time.start
@@ -126,4 +126,4 @@ class FormaIMTrace(DumpiTrace):
 		# opdata = ['a', wall_time.start.to_ns(), cpu_duration, data.origincount*self.type_sizes[data.origintype], 0]
 		opdata = ['a', cpu_time.start.to_ns(), cpu_duration, data.origincount*self.type_sizes[data.origintype], 0]
 		win_epoch = self.epochcount_per_window[win_id]
-		self.opdata_per_window[win_id][win_epoch-1].append(opdata)
+		self.opdata_per_window[win_id][win_epoch].append(opdata)

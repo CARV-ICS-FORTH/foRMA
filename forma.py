@@ -198,8 +198,6 @@ def main():
 			sys.exit(2)
 
 
-	print('foRMA - RMA timing profiling. Preparing analysis of trace.')
-
 	## adjust log level to command line option
 	#logging.basicConfig(level=logging.INFO)
 	logging.basicConfig(level=level)
