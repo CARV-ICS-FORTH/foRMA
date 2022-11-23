@@ -224,6 +224,40 @@ def main():
 		fo.forma_print_rank_ops_per_window(wins, opdata_per_rank[i])
 
 	fo.forma_print_stats_summary(ranks, wins)
+
+	while action != 'q':
+		if (not cmdlnaction):
+			if action == 'r':
+				print('--------------------------------------------\n- Options -\n' + 
+				'\te: Statistics per epoch (fence-based synchronization)\n' + 
+				'\tf: Fence statistics\n' + 
+				'\tc: Time spent in calls (per rank)\n' + 
+				'\ta: Full analysis (i.e. all of the above)\n' + 
+				'\tr: Reprint options\n' + 
+				'\tq: Quit\n')
+			action = input('Please select action: ')
+
+		if action == 'q':
+			sys.exit()
+		elif action == 'e': #
+			print('Statistics per epoch (fence-based synchronization):')
+		elif action == 'f':
+			print('Fence statistics:')
+		elif action == 'c':
+			print('Time spent in calls (per rank):')
+		elif action == 'a':
+			print('Full analysis:')
+		elif action == 'r':
+			pass
+		else:
+			print('Invalid action option!')
+			action = 'r'
+
+		if cmdlnaction:
+			sys.exit()
+
+
+	fo.forma_print_stats_summary(ranks, wins)
 	fo.forma_print_stats_to_files(ranks, wins)
 
 
