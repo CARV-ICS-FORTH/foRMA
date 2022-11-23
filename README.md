@@ -24,9 +24,11 @@ For more information and detailed installation guidelines and instructions of us
 
 ##### Step 2: Run program to produce traces. 
 Once Dumpi is installed, e.g. at a directory specified by `<DUMPI_PATH>`, you can compile your MPI program, e.g. mpi-ex with the Dumpi library using a command such as:
+
 ```$ mpicc mpi-ex.c -L <DUMPI_PATH>/lib -ldumpi -o mpi-ex
 ```
 In order to run the program with N ranks with Dumpi, you can use a command such as:
+
 ```$ mpirun -np N -x LD_LIBRARY_PATH = $LD_LIBRARY_PATH:<DUMPI_PATH>/lib mpi-ex
 ```
 The above command creates N files with the extension .bin as well as a file with the extension .meta. Each of the .bin files are named in the format `dumpi-<timestamp>-X.bin` , where `<timestamp>` is the timestamp of when the program was executed and X is the number of the rank, i.e. it takes values from 0 to N − 1. Each of the .bin files contains the trace of the execution for
@@ -36,7 +38,8 @@ If nothing else is specified, those files are dumped inside the directory of exe
 ##### Step 3: Use foRMA on produced traces in order to obtain a timing analysis
 
 Invoke the RMA Profiler from command line as follows:
-```$ forma.py -d <trace dir> -t <timestamp> [-a <option>]```
+```$ forma.py -d <trace dir> -t <timestamp> [-a <option>]
+```
 where `<trace dir>` is the directory where the SST Dumpi output traces are stored and `<timestamp>` is the timestamp in the filename of the trace. 
 
 The tool has a command line mode and an interactive mode. In order to execute the command line mode, use the optional `-a <option>` command line argument. This acts as a shortcut that will cause the tool to directly
