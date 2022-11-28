@@ -33,6 +33,39 @@ import forma_trace as ft
 from tabulate import tabulate
 
 
+
+def forma_print_stats_x6(row_labels, row_data):
+
+	## sanity check: are the row data of length==6?
+#	if len(row_data) != 6 or len(row_labels) != 6:
+#		return False
+
+	try:
+		rows = [[row_labels[i]]+row_data[i] for i in range(len(row_labels))]
+	except TypeError:
+		print('ERROR: forma_print_stats_x6: check row_labels and row_data types')
+		sys.exit(2)
+
+	print(f'{tabulate(rows, headers=["aggregate", "min", "max", "avg", "mean", "std dev"])}\n')
+	
+	return True
+
+def forma_print_stats_x4(row_labels, row_data):
+
+	try:
+		rows = [[row_labels[i]]+row_data[i] for i in range(len(row_labels))]
+	except TypeError:
+		print('ERROR: forma_print_stats_x6: check row_labels and row_data types')
+		sys.exit(2)
+
+	print(f'{tabulate(rows, headers=["aggregate", "min", "max", "avg"])}\n')
+
+	return True
+
+def forma_print_timestamps_ranks():
+	return True
+
+
 def forma_print_rank_stats(rank_id):
 
 	total = 0
@@ -85,12 +118,15 @@ def forma_print_stats_summary(ranks, wins):
 	
 	print(f'Total ranks: {ranks}\nTimes in ns')
 	
-	print(f'Operation Durations\n{tabulate([["Total exec. time"]+([0]*6), ["Total time in RMA"]+([0]*6), ["MPI_Get"]+([0]*6), ["MPI_Put"]+([0]*6), ["MPI_Accumulate"]+([0]*6)], headers=["aggregate", "min", "max", "avg", "mean", "std dev"])}\n')
+	print('Operation Durations')
+	forma_print_stats_x6(["Total exec. time", "Total time in RMA", "MPI_Get", "MPI_Put", "MPI_Accumulate", "MPI_Win_fence"], [[6, 6, 6, 6, 6, 6]]*6)
+	
+	print(f'Memory Windows: {wins}')
+	forma_print_stats_x4(["Size (B)", "Bytes transferred/win.", "Epochs per win."], [[4, 4, 4, 4]]*3)
 
-	print(f'Memory Windows: {wins}\n{tabulate([["Size (B)"]+([0]*4), ["Bytes transferred/win."]+([0]*4), ["Epochs per win."]+([0]*4)], headers=["aggregate", "min", "max", "avg"])}\n')
-
-	print(f'Data Transfer Bounds\n{tabulate([["Total exec. time"]+([0]*6), ["Total time in RMA"]+([0]*6), ["MPI_Get"]+([0]*6), ["MPI_Put"]+([0]*6), ["MPI_Accumulate"]+([0]*6)], headers=["aggregate", "min", "max", "avg", "mean", "std dev"])}\n')
-
+	print('Data Transfer Bounds')
+	forma_print_stats_x6(["MPI_Get", "MPI_Put", "MPI_Accumulate"], [[6, 6, 6, 6, 6, 6]]*3)
+	
 	return True
 
 

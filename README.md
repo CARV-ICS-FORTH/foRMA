@@ -45,16 +45,17 @@ $ forma.py -d <trace dir> -t <timestamp> [-a <option>]
 ```
 where `<trace dir>` is the directory where the SST Dumpi output traces are stored and `<timestamp>` is the timestamp in the filename of the trace. 
 
-The tool has a command line mode and an interactive mode. In order to execute the command line mode, use the optional `-a <option>` command line argument. This acts as a shortcut that will cause the tool to directly
-calculate the requested statistics and exit. In contrast, when the tool is executed in interactive mode (i.e. without the `-a <option>` command line argument),
-it offers the possibility of requesting various of the statistic options, one after the other.
+The tool has a command line mode and an interactive mode. In order to execute the command line mode, use the optional `-a <option>` command line argument. This acts as a shortcut that will cause the tool to directly calculate the requested statistics and exit. In contrast, when the tool is executed in interactive mode (i.e. without the `-a <option>` command line argument), it offers the possibility of requesting various of the statistic options, one after the other.
 
 The offered options are:
 
 - `-e`: Produces statistics per epoch.
-- `-f`: Creates statistics on fence execution.
+Outputs data transfer bounds and data volume information into file epochs.txt. Data is calculated by memory window found in the execution. For each memory window, the relevant information is organized by synchronization epochs on that window. 
+- `-f`: Creates statistics on fence execution. 
+Outputs first and last arrival to MPI_Win_fence instances in execution, into file fences.txt. Information is provided both as timestamp and rank ID.  
 - `-c`: Creates statistics on time spent inside various MPI calls.
-- `-a`: Prepare a full analysis, i.e. calculate all of the above. 
+Outputs MPI RMA call durations and statistics on them, into file calls.txt. Data is calculated by rank found to participate in the execution. For each rank, information is organized by RMA opcode. 
+- `-a`: Prepare a full analysis, i.e. calculate all of the above. Produces all three of the aforementioned output files. 
 
 ###### Output
 Independently of the provided command line argument, foRMA prepares a summary of total execution times and operation durations, as well as data transfer bounds and bytes transferred per memory window. This summary is printed out in the standard output. 
