@@ -39,6 +39,8 @@ def forma_parse_traces(tracefiles):
 	rank = 0
 	opdata_per_rank = []
 	total_exec_time_per_rank = []
+	all_window_sizes_per_rank = []
+	epochs_per_window_per_rank = []
 
 	for tracefile in tracefiles:
 		with ft.FormaIMTrace(tracefile) as trace:
@@ -50,8 +52,9 @@ def forma_parse_traces(tracefiles):
 		rank += 1
 		opdata_per_rank.append(trace.opdata_per_window)
 		total_exec_time_per_rank.append(trace.total_exec_time)
-
-	return rank, trace.win_count, opdata_per_rank, total_exec_time_per_rank
+		all_window_sizes_per_rank.append(trace.all_window_sizes)
+		epochs_per_window_per_rank.append(trace.epochcount_per_window)
+	return rank, trace.win_count, opdata_per_rank, total_exec_time_per_rank, all_window_sizes_per_rank, epochs_per_window_per_rank
 
 
 

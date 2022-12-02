@@ -25,6 +25,7 @@ import glob, os
 import re
 import fnmatch
 
+import numpy as np
 
 import logging
 
@@ -202,7 +203,7 @@ def main():
 	#logging.basicConfig(level=logging.INFO)
 	logging.basicConfig(level=level)
 
-	ranks, wins, opdata_per_rank, total_exec_times_per_rank = fp.forma_parse_traces(tracefiles)
+	ranks, wins, opdata_per_rank, total_exec_times_per_rank, all_window_sizes_per_rank, epochs_per_window_per_rank = fp.forma_parse_traces(tracefiles)
 
 	print(f'{ranks} ranks, {wins} memory windows in execution.')
 	
@@ -217,14 +218,36 @@ def main():
 			print("Inconsisten nr of epochs per window across ranks.\n")
 		sys.exit(2)
 
+	print(f'OPDATA per rank shape: {np.shape(opdata_per_rank)}')
+
+	print(f'WINDOW sizes per rank: {all_window_sizes_per_rank}')
+
 	fp.forma_calculate_dt_bounds(ranks, wins, opdata_per_rank)
 
+	"""
 	for i in range(ranks):
 		print(f'opdata for RANK {i}')
 		fo.forma_print_rank_ops_per_window(wins, opdata_per_rank[i])
+	"""
 
-	fo.forma_print_stats_summary(ranks, wins)
+	#print(f'Total durations: {fs.forma_calculate_stats_x6(total_exec_times_per_rank)}')
 
+	#print(f'Total durations stats: {fs.forma_calculate_stats_overall_x6(ranks, wins, opdata_per_rank, 1)}')
+
+
+	"""opdurations = [[6, 6, 6, 6, 6, 6]]*4
+	opdurations.append(fs.forma_calculate_stats_x6(total_exec_times_per_rank))
+	opdurations.append(fs.forma_calculate_stats_overall_x6(ranks, wins, opdata_per_rank, 1))
+	windata = [[4, 4, 4, 4]]*3
+	dtbounds = [[1, 2, 3, 4, 5, 6]]*3"""
+
+	opdurations, windata, dtbounds = fs.forma_break_down_per_rank_per_window(ranks, wins, opdata_per_rank)
+
+	opdurations, windata, dtbounds = fs.forma_calc_stats_summary(ranks, wins, total_exec_times_per_rank, all_window_sizes_per_rank[0], epochs_per_window_per_rank[0], opdata_per_rank)
+
+	fo.forma_print_stats_summary(ranks, wins, opdurations, windata, dtbounds)
+
+	"""
 	while action != 'q':
 		if (not cmdlnaction):
 			if action == 'r':
@@ -255,10 +278,10 @@ def main():
 
 		if cmdlnaction:
 			sys.exit()
+	"""
 
-
-	fo.forma_print_stats_summary(ranks, wins)
-	fo.forma_print_stats_to_files(ranks, wins)
+	#fo.forma_print_stats_summary(ranks, wins)
+	#fo.forma_print_stats_to_files(ranks, wins)
 
 
 

@@ -32,6 +32,7 @@ class FormaIMTrace(DumpiTrace):
 		self.opdata_per_window = []
 
 		self.total_exec_time = 0
+		self.all_window_sizes = []
 
 
 	def on_init(self, data, thread, cpu_time, wall_time, perf_info):
@@ -44,7 +45,7 @@ class FormaIMTrace(DumpiTrace):
 		#time_diff = wall_time.stop - wall_time.start
 		## capture start time of init and end time of finalize in order 
 		## to get the total execution time of the rank for this trace
-		self.total_exec_time = self.total_exec_time - cpu_time.stop.to_ns()
+		self.total_exec_time = cpu_time.stop.to_ns()- self.total_exec_time
 
 
 	def on_win_fence(self, data, thread, cpu_time, wall_time, perf_info):
@@ -55,7 +56,11 @@ class FormaIMTrace(DumpiTrace):
 
 		## identify window key to use on windows dictionary by looking into wintb
 		win_id = self.wintb[data.win]
-		opdata = ['f', wall_time.start.to_ns(), cpu_time.stop.to_ns(), cpu_duration]
+		""" for vectors that refer to RMA ops, we use the following 
+		convention for indexing: 0 - MPI_Get, 1 - MPI_Put, 2 - MPI_Acc
+		and if present, then 3 - MPI_Win_fence
+		"""
+		opdata = [3, wall_time.start.to_ns(), cpu_time.stop.to_ns(), cpu_duration]
 		
 
 		## log opdata into corresponding list entry in self.opdata_per_window
@@ -88,7 +93,6 @@ class FormaIMTrace(DumpiTrace):
 			self.wintb[data.win] = self.win_count-1
 			#print('window tb empty')
 
-
 		win_id = self.wintb[data.win]
 
 		## create self.epochcount_per_window list entry for new window, 
@@ -98,6 +102,8 @@ class FormaIMTrace(DumpiTrace):
 		## same for self.opdata_per_window
 		self.opdata_per_window.append([])
 
+		self.all_window_sizes.append(data.size)
+
 	def on_win_free(self, data, thread, cpu_time, wall_time, perf_info):
 		self.wintb[data.win] = -1
 
@@ -105,8 +111,13 @@ class FormaIMTrace(DumpiTrace):
 		#time_diff = wall_time.stop - wall_time.start
 		cpu_duration = (cpu_time.stop - cpu_time.start).to_ns()
 		win_id = self.wintb[data.win]
+
+		""" for vectors that refer to RMA ops, we use the following 
+		convention for indexing: 0 - MPI_Get, 1 - MPI_Put, 2 - MPI_Acc
+		and if present, then 3 - MPI_Win_fence
+		"""
 		# opdata = ['g', wall_time.start.to_ns(), cpu_duration, data.origincount*self.type_sizes[data.origintype], 0]
-		opdata = ['g', cpu_time.start.to_ns(), cpu_duration, data.origincount*self.type_sizes[data.origintype], 0]
+		opdata = [0, cpu_time.start.to_ns(), cpu_duration, data.origincount*self.type_sizes[data.origintype], 0]
 		win_epoch = self.epochcount_per_window[win_id]
 		self.opdata_per_window[win_id][win_epoch].append(opdata)
 
@@ -114,8 +125,13 @@ class FormaIMTrace(DumpiTrace):
 		#time_diff = wall_time.stop - wall_time.start
 		cpu_duration = (cpu_time.stop - cpu_time.start).to_ns()
 		win_id = self.wintb[data.win]
+
+		""" for vectors that refer to RMA ops, we use the following 
+		convention for indexing: 0 - MPI_Get, 1 - MPI_Put, 2 - MPI_Acc
+		and if present, then 3 - MPI_Win_fence
+		"""
 		# opdata = ['p', wall_time.start.to_ns(), cpu_duration, data.origincount*self.type_sizes[data.origintype], 0]
-		opdata = ['p', cpu_time.start.to_ns(), cpu_duration, data.origincount*self.type_sizes[data.origintype], 0]
+		opdata = [1, cpu_time.start.to_ns(), cpu_duration, data.origincount*self.type_sizes[data.origintype], 0]
 		win_epoch = self.epochcount_per_window[win_id]
 		self.opdata_per_window[win_id][win_epoch].append(opdata)
 
@@ -123,7 +139,12 @@ class FormaIMTrace(DumpiTrace):
 		#time_diff = wall_time.stop - wall_time.start
 		cpu_duration = (cpu_time.stop - cpu_time.start).to_ns()
 		win_id = self.wintb[data.win]
+
+		""" for vectors that refer to RMA ops, we use the following 
+		convention for indexing: 0 - MPI_Get, 1 - MPI_Put, 2 - MPI_Acc
+		and if present, then 3 - MPI_Win_fence
+		"""
 		# opdata = ['a', wall_time.start.to_ns(), cpu_duration, data.origincount*self.type_sizes[data.origintype], 0]
-		opdata = ['a', cpu_time.start.to_ns(), cpu_duration, data.origincount*self.type_sizes[data.origintype], 0]
+		opdata = [3, cpu_time.start.to_ns(), cpu_duration, data.origincount*self.type_sizes[data.origintype], 0]
 		win_epoch = self.epochcount_per_window[win_id]
 		self.opdata_per_window[win_id][win_epoch].append(opdata)
