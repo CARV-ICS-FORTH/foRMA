@@ -66,50 +66,21 @@ def forma_print_timestamps_ranks():
 	return True
 
 
-def forma_print_rank_stats(rank_id):
+def forma_print_rank_stats(rank_id, total_exec_time, opduration_stats_for_rank):
 
-	total = 0
-	rma = 0
+	rma = sum(opduration_stats_for_rank[i][0] for i in range(4))
 
-	print(f'RANK {rank_id} Operation Durations\nTotal exec. time: {total}\nTotal time in RMA: {rma}')
-	print(f'{tabulate([["MPI_Get"]+([0]*6), ["MPI_Put"]+([0]*6), ["MPI_Accumulate"]+([0]*6), ["MPI_Win_fence"]+([0]*6)], headers=["aggregate", "min", "max", "avg", "mean", "std dev"])}\n')
-
-
+	print(f'RANK {rank_id} Operation Durations\nTotal exec. time: {total_exec_time}\nTotal time in RMA: {rma}')
+	#print(f'{tabulate([["MPI_Get"]+([0]*6), ["MPI_Put"]+([0]*6), ["MPI_Accumulate"]+([0]*6), ["MPI_Win_fence"]+([0]*6)], headers=["aggregate", "min", "max", "avg", "mean", "std dev"])}\n')
+	forma_print_stats_x6(["MPI_Get", "MPI_Put", "MPI_Accumulate", "MPI_Win_fence"], opduration_stats_for_rank)
+	
 	return True
 
+def forma_print_rank_dt_bounds(rank_id, dt_bounds_stats_for_rank):
 
-def forma_print_stats_per_rank(ranks):
-
-
-	print(f'RMA operation durations per rank -- Total ranks: {ranks}\n')
-
-	for i in range(ranks):
-		forma_print_rank_stats(i)
-	return True
-
-
-def forma_print_window_stats(win_id):
-
-	epochs = 4
-
-	print(f'WINDOW {win_id}')
-	print(f'{tabulate([([0]*3)], headers=["Size (B)", "# of epochs", "Total Bytes transferred"])}\n')
-	for j in range(epochs):
-		print(f'{tabulate([[j]+[0]*5], headers=["Epoch", "Earliest ts", "(rank)", "Latest ts", "(rank)", "Range"])}\n')
-		print(f'Arrival order: {[0]*4}\n')
-
-	return True
-
-
-def forma_print_stats_per_window(ranks, wins):
-
-	epochs = 4
-
-	print(f'Data transfer bounds per window -- Total ranks: {ranks} -- Total windows: {wins}\n')
-
-	for i in range(wins):
-		forma_print_window_stats(i)
-
+	print('Data transfer bounds:')
+	forma_print_stats_x6(["MPI_Get", "MPI_Put", "MPI_Accumulate"], dt_bounds_stats_for_rank)
+	
 	return True
 
 
@@ -127,6 +98,23 @@ def forma_print_stats_summary(ranks, wins, opduration_stats, windata_stats, dtbo
 	forma_print_stats_x6(["MPI_Get", "MPI_Put", "MPI_Accumulate"], dtbound_stats)
 	
 	return True
+
+
+
+def forma_print_dtbounds_stats_for_epoch(dtbound_stats_for_epoch, data_vol_for_epoch):
+
+	forma_print_stats_x4(["MPI_Get", "MPI_Put", "MPI_Accumulate"], dtbound_stats_for_epoch)
+	
+	return True
+
+
+
+
+
+
+
+
+""" the following are deprecated functions, but we are keeping them here for code snippets """
 
 
 def forma_print_stats_to_files(ranks, wins):
@@ -158,5 +146,39 @@ def forma_print_rank_ops_per_window(wins, rank_opdata):
 		print(f'opdata for WINDOW {i}')
 		for j in range(len(rank_opdata[i])-1): # len(rank_opdata) corresponds to nr of epochs
 			print(f'Epoch {j}: {rank_opdata[i][j]}')
+
+	return True
+
+
+def forma_print_stats_per_rank(ranks):
+
+	print(f'RMA operation durations per rank -- Total ranks: {ranks}\n')
+
+	for i in range(ranks):
+		forma_print_rank_stats(i)
+	return True
+
+
+def forma_print_window_stats(win_id):
+
+	epochs = 4
+
+	print(f'WINDOW {win_id}')
+	print(f'{tabulate([([0]*3)], headers=["Size (B)", "# of epochs", "Total Bytes transferred"])}\n')
+	for j in range(epochs):
+		print(f'{tabulate([[j]+[0]*5], headers=["Epoch", "Earliest ts", "(rank)", "Latest ts", "(rank)", "Range"])}\n')
+		print(f'Arrival order: {[0]*4}\n')
+
+	return True
+
+
+def forma_print_stats_per_window(ranks, wins):
+
+	epochs = 4
+
+	print(f'Data transfer bounds per window -- Total ranks: {ranks} -- Total windows: {wins}\n')
+
+	for i in range(wins):
+		forma_print_window_stats(i)
 
 	return True

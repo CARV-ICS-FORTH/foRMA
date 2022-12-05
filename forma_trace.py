@@ -60,8 +60,8 @@ class FormaIMTrace(DumpiTrace):
 		convention for indexing: 0 - MPI_Get, 1 - MPI_Put, 2 - MPI_Acc
 		and if present, then 3 - MPI_Win_fence
 		"""
-		opdata = [3, wall_time.start.to_ns(), cpu_time.stop.to_ns(), cpu_duration]
-		
+		opdata = [3, wall_time.start.to_ns(), cpu_duration, cpu_time.stop.to_ns()]
+		# [0, cpu_time.start.to_ns(), cpu_duration, data.origincount*self.type_sizes[data.origintype], 0]
 
 		## log opdata into corresponding list entry in self.opdata_per_window
 		self.opdata_per_window[win_id].append([])

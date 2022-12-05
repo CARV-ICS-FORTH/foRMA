@@ -134,6 +134,73 @@ def set_log_level(option):
 
 	return level
 
+"""
+Outputs data transfer bounds and data volume information into 
+file epochs.txt. Data is calculated by memory window found in 
+the execution. For each memory window, the relevant information 
+is organized by synchronization epochs on that window. 
+"""
+def per_epoch_stats_to_file(ranks, wins, per_window_data_vol, opdata_per_rank):
+
+	opdata_for_epoch = []
+	epoch_data_vol_sum = 0
+
+	print('per_epoch_stats_to_file go here!')
+	for win_id in range(wins):
+		print(f'WINDOW ID: {win_id}\nTotal data volume transferred for window: {per_window_data_vol[win_id]}')
+		for epoch in range(len(opdata_per_rank[0][win_id])-1):
+			for rank in range(ranks):
+				for op in opdata_per_rank[rank][win_id][epoch]:
+					print(f'value is {opdata_per_rank[rank][win_id][epoch]}')
+					opdata_for_epoch.append(op)
+			print(f'opdata_for_epoch: {opdata_for_epoch}')
+			per_opcode_dt_bounds_for_epoch, epoch_data_vol_sum = fs.forma_merge_dt_bounds_for_epoch(opdata_for_epoch)
+
+			dtbound_stats_for_epoch = fs.forma_calculate_dtbounds_stats_for_epoch(per_opcode_dt_bounds_for_epoch)
+			print(f'Epoch {epoch}: Total bytes transferred: {epoch_data_vol_sum}\nDT bound statistics:')
+			fo.forma_print_dtbounds_stats_for_epoch(dtbound_stats_for_epoch, epoch_data_vol_sum)
+			opdata_for_epoch = []
+			epoch_data_vol_sum = 0
+	return True
+
+"""
+Creates statistics on fence execution. Outputs first and 
+last arrival to MPI_Win_fence instances in execution, into 
+file fences.txt. Information is provided both as timestamp 
+and rank ID.  
+"""
+def fence_stats_to_file(anks, wins, opdata_per_rank):
+
+	for win_id in range(wins):
+		for epoch in range(len(opdata_per_rank[0][win_id])):
+			print('fence_stats_to_file go here!')
+	return
+
+"""
+Creates statistics on time spent inside various MPI calls. Outputs 
+MPI RMA call durations and statistics on them, into file calls.txt. 
+Data is calculated by rank found to participate in the execution. 
+For each rank, information is organized by RMA opcode.
+"""
+def per_op_durations_to_file(ranks, total_exec_times_per_rank, per_opcode_op_durations_per_rank, per_opcode_dt_bounds_per_rank):
+
+	opduration_stats_for_rank = []
+	dt_bounds_stats_for_rank = []
+
+	original_stdout = sys.stdout # Save a reference to the original standard output
+	with open('calls.txt', 'w') as f:
+		sys.stdout = f # Change the standard output to the file we created.
+		print(f'RMA operation durations per rank -- Total ranks: {ranks}\n')
+		#forma_print_stats_per_rank(ranks)
+
+		for i in range(ranks):
+			per_opcode_op_durations_for_rank = per_opcode_op_durations_per_rank[i]
+			per_opcode_dt_bounds_for_rank = per_opcode_dt_bounds_per_rank[i]
+			opduration_stats_for_rank, dt_bounds_stats_for_rank = fs.forma_calculate_opduration_dtbounds_stats_for_rank(per_opcode_op_durations_for_rank, per_opcode_dt_bounds_for_rank)
+			fo.forma_print_rank_stats(i, total_exec_times_per_rank[i], opduration_stats_for_rank)
+			fo.forma_print_rank_dt_bounds(i, dt_bounds_stats_for_rank)
+	sys.stdout = original_stdout # Reset the standard output to its original value
+	return True
 
 
 def main():
@@ -218,8 +285,6 @@ def main():
 			print("Inconsisten nr of epochs per window across ranks.\n")
 		sys.exit(2)
 
-	print(f'OPDATA per rank shape: {np.shape(opdata_per_rank)}')
-
 	print(f'WINDOW sizes per rank: {all_window_sizes_per_rank}')
 
 	fp.forma_calculate_dt_bounds(ranks, wins, opdata_per_rank)
@@ -232,22 +297,26 @@ def main():
 
 	#print(f'Total durations: {fs.forma_calculate_stats_x6(total_exec_times_per_rank)}')
 
-	#print(f'Total durations stats: {fs.forma_calculate_stats_overall_x6(ranks, wins, opdata_per_rank, 1)}')
+	#print(f'Total durations stats: {fs.forma_calculate_stats_manual_x6(ranks, wins, opdata_per_rank, 1)}')
 
 
-	"""opdurations = [[6, 6, 6, 6, 6, 6]]*4
-	opdurations.append(fs.forma_calculate_stats_x6(total_exec_times_per_rank))
-	opdurations.append(fs.forma_calculate_stats_overall_x6(ranks, wins, opdata_per_rank, 1))
-	windata = [[4, 4, 4, 4]]*3
-	dtbounds = [[1, 2, 3, 4, 5, 6]]*3"""
+	per_opcode_op_durations_per_rank, per_opcode_dt_bounds_per_rank, per_window_data_vol = fs.forma_break_down_per_rank_per_window(ranks, wins, opdata_per_rank)
+	
+	opdurations, windata, dtbounds = fs.forma_calc_stats_summary(ranks, wins, total_exec_times_per_rank, 
+																all_window_sizes_per_rank[0], 
+																epochs_per_window_per_rank[0], 
+																per_opcode_op_durations_per_rank, 
+																per_opcode_dt_bounds_per_rank, 
+																per_window_data_vol)
+	
 
-	opdurations, windata, dtbounds = fs.forma_break_down_per_rank_per_window(ranks, wins, opdata_per_rank)
-
-	opdurations, windata, dtbounds = fs.forma_calc_stats_summary(ranks, wins, total_exec_times_per_rank, all_window_sizes_per_rank[0], epochs_per_window_per_rank[0], opdata_per_rank)
+	# opdurations, windata, dtbounds = fs.forma_calc_stats_summary_coarse(ranks, wins, total_exec_times_per_rank, all_window_sizes_per_rank[0], epochs_per_window_per_rank[0], opdata_per_rank)
 
 	fo.forma_print_stats_summary(ranks, wins, opdurations, windata, dtbounds)
 
-	"""
+
+
+	
 	while action != 'q':
 		if (not cmdlnaction):
 			if action == 'r':
@@ -263,13 +332,19 @@ def main():
 		if action == 'q':
 			sys.exit()
 		elif action == 'e': #
-			print('Statistics per epoch (fence-based synchronization):')
+			print('Statistics per epoch (fence-based synchronization) can be found in file epochs.txt\n')
+			per_epoch_stats_to_file(ranks, wins, per_window_data_vol, opdata_per_rank)
 		elif action == 'f':
-			print('Fence statistics:')
+			print('Fence statistics can be found in file fences.txt.\n')
+			fence_stats_to_file(ranks, wins, opdata_per_rank)
 		elif action == 'c':
-			print('Time spent in calls (per rank):')
+			print('Time spent in calls (per rank), as well as data transfer bounds, can be found in file calls.txt\n')
+			per_op_durations_to_file(ranks, total_exec_times_per_rank, per_opcode_op_durations_per_rank, per_opcode_dt_bounds_per_rank)
 		elif action == 'a':
-			print('Full analysis:')
+			print('Full analysis broken down per ranks and per windows can be found in files epochs.txt, fences.txt, and calls.txt\n')
+			per_epoch_stats_to_file(ranks, wins, opdata_per_rank)
+			fence_stats_to_file(ranks, wins, opdata_per_rank)
+			per_op_durations_to_file(ranks, total_exec_times_per_rank, per_opcode_op_durations_per_rank, per_opcode_dt_bounds_per_rank)
 		elif action == 'r':
 			pass
 		else:
@@ -278,12 +353,7 @@ def main():
 
 		if cmdlnaction:
 			sys.exit()
-	"""
-
-	#fo.forma_print_stats_summary(ranks, wins)
-	#fo.forma_print_stats_to_files(ranks, wins)
-
-
+	
 
 
 
