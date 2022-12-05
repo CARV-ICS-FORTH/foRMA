@@ -296,6 +296,21 @@ def forma_calculate_dtbounds_stats_for_epoch(per_opcode_dt_bounds_for_epoch):
 
 
 
+def forma_calculate_stragglers_for_fence(fence_arrival_times):
+
+	timestamps_ranks = [0]*6
+
+	arrival_order = [t[0] for t in sorted(enumerate(fence_arrival_times),key=lambda i:i[1])]
+	
+
+	timestamps_ranks[1] = fence_arrival_times[arrival_order[0]]
+	timestamps_ranks[2] = arrival_order[0]
+	timestamps_ranks[3] = fence_arrival_times[arrival_order[-1]]
+	timestamps_ranks[4] = arrival_order[-1]
+
+	timestamps_ranks[5] = timestamps_ranks[3] - timestamps_ranks[1]
+
+	return timestamps_ranks, arrival_order
 
 
 """ deprecated functions below, however, some code snippets might be useful """

@@ -49,6 +49,7 @@ def forma_print_stats_x6(row_labels, row_data):
 	print(f'{tabulate(rows, headers=["aggregate", "min", "max", "avg", "mean", "std dev"])}\n')
 	
 	return True
+	
 
 def forma_print_stats_x4(row_labels, row_data):
 
@@ -62,7 +63,11 @@ def forma_print_stats_x4(row_labels, row_data):
 
 	return True
 
-def forma_print_timestamps_ranks():
+
+def forma_print_timestamps_ranks(row_data):
+
+	print(f'{tabulate([row_data], headers=["Epoch", "Earliest ts", "(rank)", "Latest ts", "(rank)", "Range"])}\n')
+
 	return True
 
 
@@ -81,6 +86,13 @@ def forma_print_rank_dt_bounds(rank_id, dt_bounds_stats_for_rank):
 	print('Data transfer bounds:')
 	forma_print_stats_x6(["MPI_Get", "MPI_Put", "MPI_Accumulate"], dt_bounds_stats_for_rank)
 	
+	return True
+
+
+def forma_print_window_info(win_info):
+
+	print(f'{tabulate([win_info], headers=["Size (B)", "# of epochs", "Total Bytes transferred"])}\n')
+
 	return True
 
 

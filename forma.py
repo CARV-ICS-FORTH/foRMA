@@ -145,22 +145,28 @@ def per_epoch_stats_to_file(ranks, wins, per_window_data_vol, opdata_per_rank):
 	opdata_for_epoch = []
 	epoch_data_vol_sum = 0
 
-	print('per_epoch_stats_to_file go here!')
-	for win_id in range(wins):
-		print(f'WINDOW ID: {win_id}\nTotal data volume transferred for window: {per_window_data_vol[win_id]}')
-		for epoch in range(len(opdata_per_rank[0][win_id])-1):
-			for rank in range(ranks):
-				for op in opdata_per_rank[rank][win_id][epoch]:
-					print(f'value is {opdata_per_rank[rank][win_id][epoch]}')
-					opdata_for_epoch.append(op)
-			print(f'opdata_for_epoch: {opdata_for_epoch}')
-			per_opcode_dt_bounds_for_epoch, epoch_data_vol_sum = fs.forma_merge_dt_bounds_for_epoch(opdata_for_epoch)
+	original_stdout = sys.stdout # Save a reference to the original standard output
+	with open('epochs.txt', 'w') as f:
+		sys.stdout = f # Change the standard output to the file we created.
 
-			dtbound_stats_for_epoch = fs.forma_calculate_dtbounds_stats_for_epoch(per_opcode_dt_bounds_for_epoch)
-			print(f'Epoch {epoch}: Total bytes transferred: {epoch_data_vol_sum}\nDT bound statistics:')
-			fo.forma_print_dtbounds_stats_for_epoch(dtbound_stats_for_epoch, epoch_data_vol_sum)
-			opdata_for_epoch = []
-			epoch_data_vol_sum = 0
+		print('RMA data transfer bounds - statistics per window per epoch.')
+		for win_id in range(wins):
+			print(f'WINDOW ID: {win_id}\nTotal data volume transferred for window: {per_window_data_vol[win_id]}')
+			for epoch in range(len(opdata_per_rank[0][win_id])-1):
+				for rank in range(ranks):
+					for op in opdata_per_rank[rank][win_id][epoch]:
+						print(f'value is {opdata_per_rank[rank][win_id][epoch]}')
+						opdata_for_epoch.append(op)
+				print(f'opdata_for_epoch: {opdata_for_epoch}')
+				per_opcode_dt_bounds_for_epoch, epoch_data_vol_sum = fs.forma_merge_dt_bounds_for_epoch(opdata_for_epoch)
+
+				dtbound_stats_for_epoch = fs.forma_calculate_dtbounds_stats_for_epoch(per_opcode_dt_bounds_for_epoch)
+				print(f'Epoch {epoch}: Total bytes transferred: {epoch_data_vol_sum}\nDT bound statistics:')
+				fo.forma_print_dtbounds_stats_for_epoch(dtbound_stats_for_epoch, epoch_data_vol_sum)
+				opdata_for_epoch = []
+				epoch_data_vol_sum = 0
+	sys.stdout = original_stdout # Reset the standard output to its original value
+	
 	return True
 
 """
@@ -169,11 +175,28 @@ last arrival to MPI_Win_fence instances in execution, into
 file fences.txt. Information is provided both as timestamp 
 and rank ID.  
 """
-def fence_stats_to_file(anks, wins, opdata_per_rank):
+def fence_stats_to_file(ranks, wins, per_window_data_vol, all_window_sizes, opdata_per_rank):
 
-	for win_id in range(wins):
-		for epoch in range(len(opdata_per_rank[0][win_id])):
-			print('fence_stats_to_file go here!')
+	print(f'Rank arrivals to fences per window -- Total ranks: {ranks} -- Total windows: {wins}\n')
+
+	timestamps_ranks = [0]*6
+
+	for win_id in range(wins):	
+		print(f'WINDOW {win_id}')
+		win_total_epochs = len(opdata_per_rank[0][win_id])-1
+		#print(f'all_window_sizes[win_id]: {all_window_sizes[win_id]}, win_total_epochs: {win_total_epochs}, per_window_data_vol[win_id]: {per_window_data_vol[win_id]}')
+		fo.forma_print_window_info([all_window_sizes[win_id], win_total_epochs, per_window_data_vol[win_id]])
+		for epoch in range(win_total_epochs):
+			fence_arrivals_for_epoch = []
+			for rank in range(ranks):
+				fence_arrivals_for_epoch.append(opdata_per_rank[rank][win_id][epoch][-1][1])
+
+			timestamps_ranks, arrival_order = fs.forma_calculate_stragglers_for_fence(fence_arrivals_for_epoch)
+			timestamps_ranks[0] = epoch
+
+			fo.forma_print_timestamps_ranks(timestamps_ranks)
+			print(f'Arrival order: {arrival_order}\n')
+
 	return
 
 """
@@ -336,7 +359,7 @@ def main():
 			per_epoch_stats_to_file(ranks, wins, per_window_data_vol, opdata_per_rank)
 		elif action == 'f':
 			print('Fence statistics can be found in file fences.txt.\n')
-			fence_stats_to_file(ranks, wins, opdata_per_rank)
+			fence_stats_to_file(ranks, wins, per_window_data_vol, all_window_sizes_per_rank[0], opdata_per_rank)
 		elif action == 'c':
 			print('Time spent in calls (per rank), as well as data transfer bounds, can be found in file calls.txt\n')
 			per_op_durations_to_file(ranks, total_exec_times_per_rank, per_opcode_op_durations_per_rank, per_opcode_dt_bounds_per_rank)
