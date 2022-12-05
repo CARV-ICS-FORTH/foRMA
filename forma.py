@@ -148,8 +148,8 @@ def per_epoch_stats_to_file(ranks, wins, per_window_data_vol, opdata_per_rank):
 	original_stdout = sys.stdout # Save a reference to the original standard output
 	with open('epochs.txt', 'w') as f:
 		sys.stdout = f # Change the standard output to the file we created.
-
 		print('RMA data transfer bounds - statistics per window per epoch.')
+
 		for win_id in range(wins):
 			print(f'WINDOW ID: {win_id}\nTotal data volume transferred for window: {per_window_data_vol[win_id]}')
 			for epoch in range(len(opdata_per_rank[0][win_id])-1):
@@ -177,27 +177,31 @@ and rank ID.
 """
 def fence_stats_to_file(ranks, wins, per_window_data_vol, all_window_sizes, opdata_per_rank):
 
-	print(f'Rank arrivals to fences per window -- Total ranks: {ranks} -- Total windows: {wins}\n')
-
 	timestamps_ranks = [0]*6
 
-	for win_id in range(wins):	
-		print(f'WINDOW {win_id}')
-		win_total_epochs = len(opdata_per_rank[0][win_id])-1
-		#print(f'all_window_sizes[win_id]: {all_window_sizes[win_id]}, win_total_epochs: {win_total_epochs}, per_window_data_vol[win_id]: {per_window_data_vol[win_id]}')
-		fo.forma_print_window_info([all_window_sizes[win_id], win_total_epochs, per_window_data_vol[win_id]])
-		for epoch in range(win_total_epochs):
-			fence_arrivals_for_epoch = []
-			for rank in range(ranks):
-				fence_arrivals_for_epoch.append(opdata_per_rank[rank][win_id][epoch][-1][1])
+	original_stdout = sys.stdout # Save a reference to the original standard output
+	with open('fences.txt', 'w') as f:
+		sys.stdout = f # Change the standard output to the file we created.
+		print(f'Rank arrivals to fences per window -- Total ranks: {ranks} -- Total windows: {wins}\n')
 
-			timestamps_ranks, arrival_order = fs.forma_calculate_stragglers_for_fence(fence_arrivals_for_epoch)
-			timestamps_ranks[0] = epoch
+		for win_id in range(wins):	
+			print(f'WINDOW {win_id}')
+			win_total_epochs = len(opdata_per_rank[0][win_id])-1
+			#print(f'all_window_sizes[win_id]: {all_window_sizes[win_id]}, win_total_epochs: {win_total_epochs}, per_window_data_vol[win_id]: {per_window_data_vol[win_id]}')
+			fo.forma_print_window_info([all_window_sizes[win_id], win_total_epochs, per_window_data_vol[win_id]])
+			for epoch in range(win_total_epochs):
+				fence_arrivals_for_epoch = []
+				for rank in range(ranks):
+					fence_arrivals_for_epoch.append(opdata_per_rank[rank][win_id][epoch][-1][1])
 
-			fo.forma_print_timestamps_ranks(timestamps_ranks)
-			print(f'Arrival order: {arrival_order}\n')
+				timestamps_ranks, arrival_order = fs.forma_calculate_stragglers_for_fence(fence_arrivals_for_epoch)
+				timestamps_ranks[0] = epoch
 
-	return
+				fo.forma_print_timestamps_ranks(timestamps_ranks)
+				print(f'Arrival order: {arrival_order}\n')
+	sys.stdout = original_stdout # Reset the standard output to its original value
+
+	return True
 
 """
 Creates statistics on time spent inside various MPI calls. Outputs 
