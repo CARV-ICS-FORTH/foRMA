@@ -22,6 +22,8 @@ class FormaIMTrace(DumpiTrace):
 		super().__init__(file_name)
 		self.fence_count = 0
 		self.win_count = 0
+
+		self.source_file = []
 		
 		## DataVolumes per epoch per detected window for current trace. 
 		## indexed by window ID (cf. window lookaside translation buffer wintb)
@@ -40,6 +42,7 @@ class FormaIMTrace(DumpiTrace):
 		## capture start time of init and end time of finalize in order 
 		## to get the total execution time of the rank for this trace
 		self.total_exec_time = cpu_time.start.to_ns()
+		self.source_file = data
 
 	def on_finalize(self, data, thread, cpu_time, wall_time, perf_info):
 		#time_diff = wall_time.stop - wall_time.start

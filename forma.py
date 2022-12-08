@@ -104,7 +104,7 @@ def check_consistency(ranks, wins, opdata_per_rank):
 		for j in range(wins):
 			epoch_cnt = len(opdata_per_rank[0][j])
 			for i in range(ranks):
-				if len(opdata_per_rank[j][j]) != epoch_cnt:
+				if len(opdata_per_rank[i][j]) != epoch_cnt:
 					return 3
 	
 	print("Sanity check ok.\n")
@@ -155,9 +155,9 @@ def per_epoch_stats_to_file(ranks, wins, per_window_data_vol, opdata_per_rank):
 			for epoch in range(len(opdata_per_rank[0][win_id])-1):
 				for rank in range(ranks):
 					for op in opdata_per_rank[rank][win_id][epoch]:
-						print(f'value is {opdata_per_rank[rank][win_id][epoch]}')
+						#print(f'value is {opdata_per_rank[rank][win_id][epoch]}')
 						opdata_for_epoch.append(op)
-				print(f'opdata_for_epoch: {opdata_for_epoch}')
+				#print(f'opdata_for_epoch: {opdata_for_epoch}')
 				per_opcode_dt_bounds_for_epoch, epoch_data_vol_sum = fs.forma_merge_dt_bounds_for_epoch(opdata_for_epoch)
 
 				dtbound_stats_for_epoch = fs.forma_calculate_dtbounds_stats_for_epoch(per_opcode_dt_bounds_for_epoch)
@@ -312,7 +312,7 @@ def main():
 			print("Inconsisten nr of epochs per window across ranks.\n")
 		sys.exit(2)
 
-	print(f'WINDOW sizes per rank: {all_window_sizes_per_rank}')
+	#print(f'WINDOW sizes per rank: {all_window_sizes_per_rank}')
 
 	fp.forma_calculate_dt_bounds(ranks, wins, opdata_per_rank)
 

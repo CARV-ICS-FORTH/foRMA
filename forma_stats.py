@@ -83,7 +83,7 @@ def forma_merge_dt_bounds_for_epoch(opdata_for_epoch):
 
 	for op in opdata_for_epoch:
 		if op != []: # i.e. take into account this trace parsing fluke where we register the last MPI_Win_fence, which does not belong to an epoch
-			print(f'operation is {op}')
+			#print(f'operation is {op}')
 			if op[0] != 3: 	# i.e. if type != MPI_Win_fence
 				per_opcode_dt_bounds_for_epoch[op[0]].append(op[4])
 				epoch_data_vol_sum = epoch_data_vol_sum + op[3]
@@ -119,7 +119,7 @@ def forma_break_down_per_rank_per_window(ranks, wins, opdata_per_rank):
 						per_window_data_vol[win_id] = per_window_data_vol[win_id] + op[3]
 
 
-	print(f'per_opcode_op_durations_per_rank is {per_opcode_op_durations_per_rank}')
+	#print(f'per_opcode_op_durations_per_rank is {per_opcode_op_durations_per_rank}')
 
 	return per_opcode_op_durations_per_rank, per_opcode_dt_bounds_per_rank, per_window_data_vol
 
@@ -188,8 +188,8 @@ def forma_calc_stats_summary(ranks, wins, total_exec_times_per_rank,
 				if i != 3:
 					per_opcode_dt_bounds[i].append(per_opcode_dt_bounds_per_rank[j][i][k])
 	
-	print(f'per_opcode_op_durations in new function: {per_opcode_op_durations}')
-	print(f'per_opcode_dt_bounds in new function: {per_opcode_dt_bounds}')
+	#print(f'per_opcode_op_durations in new function: {per_opcode_op_durations}')
+	#print(f'per_opcode_dt_bounds in new function: {per_opcode_dt_bounds}')
 
 	opduration_stats = forma_calc_opduration_summary(ranks, 
 													total_exec_times_per_rank, 
