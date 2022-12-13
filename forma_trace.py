@@ -23,7 +23,7 @@ class FormaIMTrace(DumpiTrace):
 		self.fence_count = 0
 		self.win_count = 0
 
-		self.source_file = []
+		#self.source_file = DumpiInit(0):
 		
 		## DataVolumes per epoch per detected window for current trace. 
 		## indexed by window ID (cf. window lookaside translation buffer wintb)

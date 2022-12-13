@@ -369,8 +369,8 @@ def main():
 			per_op_durations_to_file(ranks, total_exec_times_per_rank, per_opcode_op_durations_per_rank, per_opcode_dt_bounds_per_rank)
 		elif action == 'a':
 			print('Full analysis broken down per ranks and per windows can be found in files epochs.txt, fences.txt, and calls.txt\n')
-			per_epoch_stats_to_file(ranks, wins, opdata_per_rank)
-			fence_stats_to_file(ranks, wins, opdata_per_rank)
+			per_epoch_stats_to_file(ranks, wins, per_window_data_vol, opdata_per_rank)
+			fence_stats_to_file(ranks, wins, per_window_data_vol, all_window_sizes_per_rank[0], opdata_per_rank)
 			per_op_durations_to_file(ranks, total_exec_times_per_rank, per_opcode_op_durations_per_rank, per_opcode_dt_bounds_per_rank)
 		elif action == 'r':
 			pass
