@@ -61,8 +61,8 @@ def forma_parse_traces(tracefiles):
 
 		#print("{0}".format(trace.source_file.argv[0]), end="\n")
 
-		sourcefile = ctypes.cast(trace.source_file.argv, ctypes.c_char_p)
-		print(f'current trace produced by a run of source code : {sourcefile}')
+		sourcefile = trace.source_file
+		print(f'current trace produced by a run of source code : {sourcefile.argv}')
 
 	return rank, trace.win_count, opdata_per_rank, total_exec_time_per_rank, all_window_sizes_per_rank, epochs_per_window_per_rank
 

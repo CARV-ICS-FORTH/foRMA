@@ -107,7 +107,7 @@ def forma_print_stats_summary(ranks, wins, opduration_stats, windata_stats, dtbo
 	forma_print_stats_x4(["Size (B)", "Bytes transferred/win.", "Epochs per win."], windata_stats)
 
 	print('Data Transfer Bounds')
-	forma_print_stats_x6(["MPI_Get", "MPI_Put", "MPI_Accumulate"], dtbound_stats)
+	forma_print_stats_x4(["MPI_Get", "MPI_Put", "MPI_Accumulate"], dtbound_stats)
 	
 	return True
 
