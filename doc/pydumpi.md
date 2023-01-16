@@ -30,3 +30,12 @@ The pydumpi repository contains the following modules:
 
 
 # The DumpiTrace class
+
+The class represents a binary dumpi trace and as such, it has the attributes `file_name`, which indicates the binary trace file, and `cbacks`, which contains the so-called registered callbacks. Registered callbacks are callbacks that can be defined in a child class of DumpiTrace (in Python) and only those are registered with the C language backend of the SST Dumpi library. For example, in the case of foRMA, we create child classes of DumpiTrace and define callbacks for the RMA primitives that we are interested in, i.e., MPI_Win_create, MPI_Win_free, MPI_Win_fence, MPI_Put, MPI_Get, MPI_Accumulate, as well as MPI_Init and MPI_Finalize. 
+
+### Naming conventions
+Recall that all available callbacks in the DumpiTrace class are listed in the module `callbacks.py`. The naming convention for the callbacks uses only lowercase letters and substitutes the "MPI_" part of the function name with "on_".
+
+### In foRMA
+
+For foRMA, we create two child classes of DumpiTrace, namely `FormaIMTrace`, which stands for foRMA in-memory (IM) trace, and `FormaINCTrace`, which stands for foRMA incremental (INC) trace. In `FormaIMTrace`, versions of the callback implementations are provided where all profiled MPI operation data are kept in dedicated vectors during trace parsing and statistics are calculated a posteriori. In `FormaINCTrace`, which is a work in progress, an attempt is made to reduce the required memory footprint and the callbacks are being implemented in such a way, that the extracted timing information is used directly for incremental statistics calculation during parsing. 
