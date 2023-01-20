@@ -118,10 +118,6 @@ Further foRMA command line options result in detailed statistics per rank or mem
 
 Both in the summaries as well as the detailed statistics, and both when presenting durations or data volumes, foRMA also calculates min, max, averages and medians, as well as standard deviations. The indexes labeled "aggregate" may refer to a sum of values across ranks (i.e. total execution time or total time spent in MPI_Get) or across windows (i.e. total bytes transferred in execution).
 
-## asdfasdf
-
-If nothing else is specified, those files are dumped inside the directory of execution of the MPI program. In order to control the location of the trace files, it is recommended to create a specific folder for collecting them. One way of specifying where to store trace files, is to include a dumpi.conf file with the relevant information, in the execution directory. For more information on the dumpi.conf file and for an example template, refer to the [Dumpi user manual](https://github.com/sstsimulator/sst-dumpi/blob/master/docs/user.dox), specifically, section ”Runtime configuration of the DUMPI trace library”.
-
 
 
 # Acknowledgements
