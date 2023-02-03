@@ -13,7 +13,7 @@ As you may notice following the quick-start guide, pydumpi comes with a dependen
 ##### Quick (and ugly) fix to the issue of different versions
 Although the different SST dumpi versions seem to be largely compatible regarding the interfaces that are used by pydumpi and the format of the tracefile, you may nevertheless want to ensure that pydumpi uses the dumpi version that was used to create your traces -- even if it is only for the sake of eliminating the warning. 
 
-In this case, make sure to follow the instructions of the section "Install from Source" that are found in the [quick-start guide at PyPi](https://pypi.org/project/pydumpi/0.1.2/) or in the ["To install Pydumpi"](https://github.com/CARV-ICS-FORTH/foRMA#to-install-pydumpi) section of the README text of this repository. 
+In this case, make sure to follow the instructions of the section "Install from Source" that are found in the [quick-start guide at PyPi](https://pypi.org/project/pydumpi/0.1.2/) or in the "To install Pydumpi" section of the README text of this repository. 
 
 After cloning the pydumpi git repository and starting up a virtual environment, and before performing the final installation step (i.e. ```$ pip install ../pydumpi```), make sure to edit files ```setup.py``` and ```undumpi.py``` in the pydumpi source code directory that you have cloned.
 
