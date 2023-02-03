@@ -50,7 +50,7 @@ def forma_parse_traces(tracefiles):
 
 			print(f'now reading {tracefile}.')
 			trace.read_stream()
-			print(f'Fence count for rank {rank} is: {trace.fence_count}')
+			#print(f'Fence count for rank {rank} is: {trace.fence_count}')
 		rank += 1
 		opdata_per_rank.append(trace.opdata_per_window)
 		total_exec_time_per_rank.append(trace.total_exec_time)
@@ -62,7 +62,7 @@ def forma_parse_traces(tracefiles):
 		#print("{0}".format(trace.source_file.argv[0]), end="\n")
 
 		sourcefile = trace.source_file
-		print(f'current trace produced by a run of source code : {sourcefile.argv}')
+		#print(f'current trace produced by a run of source code : {sourcefile.argv}')
 
 	return rank, trace.win_count, opdata_per_rank, total_exec_time_per_rank, all_window_sizes_per_rank, epochs_per_window_per_rank
 
@@ -83,4 +83,5 @@ def forma_calculate_dt_bounds(ranks, wins, opdata_per_rank):
 				for l in range(len(opdata_per_rank[i][j][k])-1): # operation, except fence
 					opdata_per_rank[i][j][k][l][4] = opdata_per_rank[i][j][k][-1][3] - opdata_per_rank[i][j][k][l][1]
 					#print(f'\t\t\toperation {l} out of {len(opdata_per_rank[i][j][k])}')
+	print('Done.\n')
 	return True

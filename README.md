@@ -68,6 +68,8 @@ $ pip install ../pydumpi
 
 For more information on Pydumpi, you can refer to the [local documentation](doc/pydumpi.md) about it.
 
+⚠️ _Important notice:_ If you wish to have compatibility between the SST Dumpi version that is used by pydumpi and the SST Dumpi version that was used to create your tracefiles, please refer to section [Notes regarding pydumpi installation](doc/pydumpi.md) of the [local documentation](doc/pydumpi.md#notes-regarding-pydumpi-installation)  
+
 ##### Step 1: Compile the MPI program with SST Dumpi. 
 
 Once Dumpi is installed, e.g. at a directory specified by `$DUMPI_PATH/`, you can compile your MPI program, e.g. `mpi-app` with the Dumpi library using a command such as:

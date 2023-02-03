@@ -4,7 +4,26 @@ pydumpi is a Python module which provides bindings for the SST dumpi trace libra
 
 ## Quick Start
 
-For a quick-start guide, the user may refer to the [pydumpi project page at PyPi](https://pypi.org/project/pydumpi/0.1.2/) or the readme in the [pydumpi Github repository](https://github.com/justacid/pydumpi/blob/master/README.md)
+For a quick-start guide, the user may refer to the [pydumpi project page at PyPi](https://pypi.org/project/pydumpi/0.1.2/) or the readme in the [pydumpi Github repository](https://github.com/justacid/pydumpi/blob/master/README.md).
+
+### Notes regarding pydumpi installation
+As you may notice following the quick-start guide, pydumpi comes with a dependency to the dumpi library -- specifically, if the libundumpi.so library is not found in the system's path, it is downloaded and compiled during the pydumpi installation. Notice here that pydumpi searches for (and eventually downloads, if need be) version 8.0.0 of dumpi. However, SST dumpi being already on version 12.1.0 at the time of writing this guide, a discrepancy between the dumpi version installed by pydumpi and the dumpi version that was used to produce the tracefiles that foRMA processes, will produce a warning each time a tracefile is opened by foRMA (which is using pydumpi which is using the libundumpi library). 
+
+
+##### Quick (and ugly) fix to the issue of different versions
+Although the different SST dumpi versions seem to be largely compatible regarding the interfaces that are used by pydumpi and the format of the tracefile, you may nevertheless want to ensure that pydumpi uses the dumpi version that was used to create your traces -- even if it is only for the sake of eliminating the warning. 
+
+In this case, make sure to follow the instructions of the section "Install from Source" that are found in the [quick-start guide at PyPi](https://pypi.org/project/pydumpi/0.1.2/) or in the ["To install Pydumpi"](https://github.com/CARV-ICS-FORTH/foRMA#to-install-pydumpi) section of the README text of this repository. 
+
+After cloning the pydumpi git repository and starting up a virtual environment, and before performing the final installation step (i.e. ```$ pip install ../pydumpi```), make sure to edit files ```setup.py``` and ```undumpi.py``` in the pydumpi source code directory that you have cloned.
+
+* In ```setup.py```, substitute the line ```lib = find_library("undumpi")```, with the line ```lib = "$YOUR_DUMPI_INSTALLATION_DIR/lib/libundumpi.so"``` .
+* In ```setup.py```, further substitute the version number (i.e. "8.0.0") in the line ```package_data={"pydumpi": ["lib/libundumpi.so.8.0.0"]}``` with the version number of your SST Dumpi installation.  
+* In ```undumpi.py```, substitute the line ```undumpi = find_library("undumpi")```, with the line ```undumpi = "$YOUR_DUMPI_INSTALLATION_DIR/lib/libundumpi.so"```
+
+After having performed these alterations, proceed with the final installation step (i.e. ```$ pip install ../pydumpi```). 
+
+⚠️ However, notice that in case you follow the above path, you must always run foRMA in the virtual environment in which you have installed pydumpi!
 
 ## Usage in foRMA
 
