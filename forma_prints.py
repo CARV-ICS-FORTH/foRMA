@@ -26,6 +26,8 @@ import fnmatch
 
 import logging
 
+import numpy as np
+
 from pydumpi import DumpiTrace
 
 import forma_trace as ft
@@ -96,17 +98,32 @@ def forma_print_window_info(win_info):
 	return True
 
 
-def forma_print_stats_summary(ranks, wins, opduration_stats, windata_stats, dtbound_stats):
+def forma_print_stats_summary(ranks, wins, opduration_stats, windata_stats, dtbound_stats, rma_callcount_per_rank):
 
-	print(f'Total ranks: {ranks}\nTimes in ns')
-	
-	print('Operation Durations')
+
+	print('------------------------------------------------------------------------------------------\n' + 
+		'----------------------------- EXECUTION SUMMARY ------------------------------------------\n' + 
+		'------------------------------------------------------------------------------------------\n' +
+		'\n' +
+		f'-- # of ranks\t\t\t:   {ranks}\n' +
+		f'-- # of memory windows\t\t:   {wins}\n' +
+		f'-- # of MPI_Get calls\t\t:   {np.array(rma_callcount_per_rank).sum(axis=0)[0]}\n' +
+		f'-- # of MPI_Put calls\t\t:   {np.array(rma_callcount_per_rank).sum(axis=0)[1]}\n' +
+		f'-- # of MPI_Accumulate calls\t:   {np.array(rma_callcount_per_rank).sum(axis=0)[2]}\n' +
+		f'-- # of MPI_Win_fence calls\t:   {np.array(rma_callcount_per_rank).sum(axis=0)[3]}\n' +
+		'\n')
+
+
+	print('------------------------------------------------------------------------------------------\n' +
+	'---------------------- [Operation] Durations (seconds)------------------------------------\n')
 	forma_print_stats_x6(["Total exec. time", "Total time in RMA", "MPI_Get", "MPI_Put", "MPI_Accumulate", "MPI_Win_fence"], opduration_stats)
 	
-	print(f'Memory Windows: {wins}')
+	print('------------------------------------------------------------------------------------------\n' +
+	'---------------------------- Data Sizes Transferred --------------------------------------\n')
 	forma_print_stats_x4(["Size (B)", "Bytes transferred/win.", "Epochs per win."], windata_stats)
 
-	print('Data Transfer Bounds')
+	print('------------------------------------------------------------------------------------------\n' +
+	'-------------------------- Data Transfer Bounds ------------------------------------------\n')
 	forma_print_stats_x4(["MPI_Get", "MPI_Put", "MPI_Accumulate"], dtbound_stats)
 	
 	return True

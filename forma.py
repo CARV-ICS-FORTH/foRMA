@@ -69,18 +69,38 @@ def check_filepaths(dirname, timestamp):
 	return(ordered_files)
 
 
-def check_mem_capacity(tracefiles, rma_tracked_calls):
+def check_mem_capacity(tracefiles, rma_tracked_calls, rma_callcount_per_rank):
 
 	total_rma_occurrences = 0
 
+
 	for tf in tracefiles:
+
+		rma_occurrences_for_rank = [0,0,0,0]
+
 		with ft.FormaIMTrace(tf) as trace:
 			print(f'Reading footer of {tf}.')
 			fcalls, icalls = trace.read_footer()
 			for name, count in fcalls.items():
-				if name in {"on_get", "on_put", "on_accumulate", "on_win_fence"}:
+				#if name in {"on_get", "on_put", "on_accumulate", "on_win_fence"}:
+				if name == "on_get": 
 					#print("  {0}: {1}".format(name, count))
+					rma_occurrences_for_rank[0] = count
 					total_rma_occurrences += count
+				if name == "on_put": 
+					#print("  {0}: {1}".format(name, count))
+					rma_occurrences_for_rank[1] = count
+					total_rma_occurrences += count
+				if name == "on_accumulate": 
+					#print("  {0}: {1}".format(name, count))
+					rma_occurrences_for_rank[2] = count
+					total_rma_occurrences += count
+				if name == "on_win_fence": 
+					#print("  {0}: {1}".format(name, count))
+					rma_occurrences_for_rank[3] = count
+					total_rma_occurrences += count
+
+		rma_callcount_per_rank.append(rma_occurrences_for_rank)
 
 	in_mem_estimate = (total_rma_occurrences * 32) / 1024 ## how many KByte for in-memory version? (assuming 32 byte needed per op)
 
@@ -149,10 +169,14 @@ def per_epoch_stats_to_file(ranks, wins, per_window_data_vol, opdata_per_rank):
 	original_stdout = sys.stdout # Save a reference to the original standard output
 	with open('epochs.txt', 'w') as f:
 		sys.stdout = f # Change the standard output to the file we created.
-		print('RMA data transfer bounds - statistics per window per epoch.')
+		print('------------------------------------------------------------------------------------------\n' + 
+		'----------- RMA data transfer bounds - statistics per window per epoch -------------------\n' + 
+		'------------------------------------------------------------------------------------------\n')
 
 		for win_id in range(wins):
-			print(f'WINDOW ID: {win_id}\nTotal data volume transferred for window: {per_window_data_vol[win_id]}')
+			print(f'------------ WINDOW ID: {win_id} \n\n' +
+				f'- Total bytes transferred\t:   {per_window_data_vol[win_id]}\n' +
+				f'- Total epochs\t\t\t:   {len(opdata_per_rank[0][win_id])-1}\n')
 			for epoch in range(len(opdata_per_rank[0][win_id])-1):
 				for rank in range(ranks):
 					for op in opdata_per_rank[rank][win_id][epoch]:
@@ -162,7 +186,10 @@ def per_epoch_stats_to_file(ranks, wins, per_window_data_vol, opdata_per_rank):
 				per_opcode_dt_bounds_for_epoch, epoch_data_vol_sum = fs.forma_merge_dt_bounds_for_epoch(opdata_for_epoch)
 
 				dtbound_stats_for_epoch = fs.forma_calculate_dtbounds_stats_for_epoch(per_opcode_dt_bounds_for_epoch)
-				print(f'Epoch {epoch}: Total bytes transferred: {epoch_data_vol_sum}\nDT bound statistics:')
+				print(f'-------> Epoch {epoch} \n\n' + 
+					f'Total bytes transferred\t\t :   {epoch_data_vol_sum}\n\n' +
+					'DT bound statistics\n' +
+					'-------------------')
 				fo.forma_print_dtbounds_stats_for_epoch(dtbound_stats_for_epoch, epoch_data_vol_sum)
 				opdata_for_epoch = []
 				epoch_data_vol_sum = 0
@@ -288,12 +315,14 @@ def main():
 
 	tracefiles = check_filepaths(dirname, timestamp)
 
+	rma_callcount_per_rank = []
+
 	if version=='m':
-		if check_mem_capacity(tracefiles, rma_tracked_calls):
+		if check_mem_capacity(tracefiles, rma_tracked_calls, rma_callcount_per_rank):
 			print("In-memory version for this trace will exhaust your system's resources. Opt for incremental version instead.")
 			sys.exit(2)
 
-
+	
 	## adjust log level to command line option
 	#logging.basicConfig(level=logging.INFO)
 	logging.basicConfig(level=level)
@@ -340,7 +369,11 @@ def main():
 
 	# opdurations, windata, dtbounds = fs.forma_calc_stats_summary_coarse(ranks, wins, total_exec_times_per_rank, all_window_sizes_per_rank[0], epochs_per_window_per_rank[0], opdata_per_rank)
 
-	fo.forma_print_stats_summary(ranks, wins, opdurations, windata, dtbounds)
+
+	print("\n\n\n")
+
+
+	fo.forma_print_stats_summary(ranks, wins, opdurations, windata, dtbounds, rma_callcount_per_rank)
 
 
 
@@ -348,7 +381,9 @@ def main():
 	while action != 'q':
 		if (not cmdlnaction):
 			if action == 'r':
-				print('--------------------------------------------\n- Options -\n' + 
+				print('\n\n\n------------------------------------------------------------------------------------------\n' + 
+				'------------------------------------ OPTIONS ---------------------------------------------\n' + 
+				'------------------------------------------------------------------------------------------\n' + 
 				'\te: Statistics per epoch (fence-based synchronization)\n' + 
 				'\tf: Fence statistics\n' + 
 				'\tc: Time spent in calls (per rank)\n' + 

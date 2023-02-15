@@ -31,11 +31,11 @@ The RMA timing data of each trace is then organized by
 - RMA operation in window epoch (op_in_epoch)
 
 The lowest-level  granularity is the `opdata` vector, a vector that contains timing and data volume data for a single RMA (or RMA-related) operation. It is a vector of five elements that contain the following information:
-- `opdata[0]`: RMA opcode. We use the following 		convention: 0 - MPI_Get, 1 - MPI_Put, 2 - MPI_Accumulate, and 3 - MPI_Win_fence.
+- `opdata[0]`: RMA opcode. We use the following convention: 0 - `MPI_Get`, 1 - `MPI_Put`, 2 - `MPI_Accumulate`, and 3 - `MPI_Win_fence`.
 - `opdata[1]`: Operation start time (wall clock). This is used as an estimate of data transfer start. 
 - `opdata[2]`: Operation duration (wall clock).
 - `opdata[3]`: Data volume transferred (Bytes). In the special case of MPI_Win_fence (`opdata[0]` == 3), this field is interpreted as the operation wall clock finishing time and is used to calculate the data transfer bounds of the epoch. 
-- `opdata[4]`: Data transfer bound. While the previous elements are filled out while parsing a trace file, this field is calculated after parsing, given that it represents the duration of a data transfer, calculated  as the difference of `opdata[1]` and the end time of the next MPI_Win_fence op referring to that window.  In the special case of MPI_Win_fence (`opdata[0]` == 3), this field is not present.
+- `opdata[4]`: Data transfer bound. While the previous elements are filled out while parsing a trace file, this field is calculated after parsing, given that it represents the duration of a data transfer, calculated  as the difference of `opdata[1]` and the end time of the next `MPI_Win_fence` op referring to that window.  In the special case of `MPI_Win_fence` (`opdata[0]` == 3), this field is not present.
 
 Based on the above, it follows that in order to access the `opdata` vector of a particular operation in  `opdata_per_rank`, the following indexing is used: 
 ```
