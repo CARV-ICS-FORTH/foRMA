@@ -79,7 +79,7 @@ def check_mem_capacity(tracefiles, rma_tracked_calls, rma_callcount_per_rank):
 		rma_occurrences_for_rank = [0,0,0,0]
 
 		with ft.FormaIMTrace(tf) as trace:
-			print(f'Reading footer of {tf}.')
+			#print(f'Reading footer of {tf}.')
 			fcalls, icalls = trace.read_footer()
 			for name, count in fcalls.items():
 				#if name in {"on_get", "on_put", "on_accumulate", "on_win_fence"}:
@@ -104,7 +104,7 @@ def check_mem_capacity(tracefiles, rma_tracked_calls, rma_callcount_per_rank):
 
 	in_mem_estimate = (total_rma_occurrences * 32) / 1024 ## how many KByte for in-memory version? (assuming 32 byte needed per op)
 
-	print(f'Total RMA occurrences to be considered: {total_rma_occurrences}')
+	#print(f'Total RMA occurrences to be considered: {total_rma_occurrences}')
 
 	if in_mem_estimate > 9.766e+6: ## for now, checking whether I need more than 10 Giga
 		return True
@@ -114,7 +114,7 @@ def check_mem_capacity(tracefiles, rma_tracked_calls, rma_callcount_per_rank):
 
 def check_consistency(ranks, wins, opdata_per_rank):
 
-	print("Performing a format sanity check on extracted trace data...")
+	print("Performing a format sanity check on extracted trace data...\t", end="")
 
 	if len(opdata_per_rank) != ranks:
 		return 1
@@ -174,9 +174,9 @@ def per_epoch_stats_to_file(ranks, wins, per_window_data_vol, opdata_per_rank):
 		'------------------------------------------------------------------------------------------\n')
 
 		for win_id in range(wins):
-			print(f'------------ WINDOW ID: {win_id} \n\n' +
-				f'- Total bytes transferred\t:   {per_window_data_vol[win_id]}\n' +
-				f'- Total epochs\t\t\t:   {len(opdata_per_rank[0][win_id])-1}\n')
+			print(f'WINDOW ID: {win_id} \n\n' +
+				f'-- Total bytes transferred\t:   {per_window_data_vol[win_id]}\n' +
+				f'-- Total epochs\t\t\t:   {len(opdata_per_rank[0][win_id])-1}\n')
 			for epoch in range(len(opdata_per_rank[0][win_id])-1):
 				for rank in range(ranks):
 					for op in opdata_per_rank[rank][win_id][epoch]:
@@ -210,10 +210,14 @@ def fence_stats_to_file(ranks, wins, per_window_data_vol, all_window_sizes, opda
 	original_stdout = sys.stdout # Save a reference to the original standard output
 	with open('fences.txt', 'w') as f:
 		sys.stdout = f # Change the standard output to the file we created.
-		print(f'Rank arrivals to fences per window -- Total ranks: {ranks} -- Total windows: {wins}\n')
+		print('------------------------------------------------------------------------------------------\n' + 
+		'----------------------- Rank arrivals to fences per window  ------------------------------\n' + 
+		'------------------------------------------------------------------------------------------\n' +
+		f'-- Total ranks\t\t:   {ranks}\n' +
+		f'-- Total windows\t:   {wins}\n\n')
 
 		for win_id in range(wins):	
-			print(f'WINDOW {win_id}')
+			print(f'WINDOW ID:  {win_id}\n\n')
 			win_total_epochs = len(opdata_per_rank[0][win_id])-1
 			#print(f'all_window_sizes[win_id]: {all_window_sizes[win_id]}, win_total_epochs: {win_total_epochs}, per_window_data_vol[win_id]: {per_window_data_vol[win_id]}')
 			fo.forma_print_window_info([all_window_sizes[win_id], win_total_epochs, per_window_data_vol[win_id]])
@@ -223,7 +227,7 @@ def fence_stats_to_file(ranks, wins, per_window_data_vol, all_window_sizes, opda
 					fence_arrivals_for_epoch.append(opdata_per_rank[rank][win_id][epoch][-1][1])
 
 				timestamps_ranks, arrival_order = fs.forma_calculate_stragglers_for_fence(fence_arrivals_for_epoch)
-				timestamps_ranks[0] = epoch
+				timestamps_ranks[0] = epoch # used for correctly printing the epoch nr in the first column in forma_print_timestamps_ranks()
 
 				fo.forma_print_timestamps_ranks(timestamps_ranks)
 				print(f'Arrival order: {arrival_order}\n')
@@ -245,8 +249,10 @@ def per_op_durations_to_file(ranks, total_exec_times_per_rank, per_opcode_op_dur
 	original_stdout = sys.stdout # Save a reference to the original standard output
 	with open('calls.txt', 'w') as f:
 		sys.stdout = f # Change the standard output to the file we created.
-		print(f'RMA operation durations per rank -- Total ranks: {ranks}\n')
-		#forma_print_stats_per_rank(ranks)
+		print('------------------------------------------------------------------------------------------\n' + 
+		'------------------------ RMA operation durations per rank  -------------------------------\n' + 
+		'------------------------------------------------------------------------------------------\n' +
+		f'-- Total ranks\t\t:   {ranks}\n')
 
 		for i in range(ranks):
 			per_opcode_op_durations_for_rank = per_opcode_op_durations_per_rank[i]
@@ -328,8 +334,6 @@ def main():
 	logging.basicConfig(level=level)
 
 	ranks, wins, opdata_per_rank, total_exec_times_per_rank, all_window_sizes_per_rank, epochs_per_window_per_rank = fp.forma_parse_traces(tracefiles)
-
-	print(f'{ranks} ranks, {wins} memory windows in execution.')
 	
 	sanity_check = check_consistency(ranks, wins, opdata_per_rank)
 	if sanity_check != 0:

@@ -48,9 +48,10 @@ def forma_parse_traces(tracefiles):
 		with ft.FormaIMTrace(tracefile) as trace:
 			## keeping next line in order to remember where to find sizes in -- check pydumpi/undumpi.py
 
-			print(f'now reading {tracefile}.')
+			print(f'now reading {tracefile}...\t\t', end="")
 			trace.read_stream()
 			#print(f'Fence count for rank {rank} is: {trace.fence_count}')
+			print('Done.\n')
 		rank += 1
 		opdata_per_rank.append(trace.opdata_per_window)
 		total_exec_time_per_rank.append(trace.total_exec_time)
@@ -70,7 +71,7 @@ def forma_parse_traces(tracefiles):
 
 def forma_calculate_dt_bounds(ranks, wins, opdata_per_rank):
 
-	print('Calculating data transfer bounds in execution...')
+	print('Calculating data transfer bounds in execution...\t\t', end="")
 
 	#print(opdata_per_rank)
 

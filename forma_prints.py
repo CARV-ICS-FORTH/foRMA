@@ -77,7 +77,15 @@ def forma_print_rank_stats(rank_id, total_exec_time, opduration_stats_for_rank):
 
 	rma = sum(opduration_stats_for_rank[i][0] for i in range(4))
 
-	print(f'RANK {rank_id} Operation Durations\nTotal exec. time: {total_exec_time}\nTotal time in RMA: {rma}')
+	print('\n------------------------------------------------------------------------------------------\n' + 
+		f'RANK ID: {rank_id} \n\n' +
+		f'-- Total exec. time\t:   {total_exec_time}\n' +
+		f'-- nTotal time in RMA\t:   {rma}\n')
+
+	print('Op durations (nsec) \n' +
+		  '-------------------')
+
+	#print(f'RANK {rank_id} Operation Durations\nTotal exec. time: {total_exec_time}\nTotal time in RMA: {rma}')
 	#print(f'{tabulate([["MPI_Get"]+([0]*6), ["MPI_Put"]+([0]*6), ["MPI_Accumulate"]+([0]*6), ["MPI_Win_fence"]+([0]*6)], headers=["aggregate", "min", "max", "avg", "mean", "std dev"])}\n')
 	forma_print_stats_x6(["MPI_Get", "MPI_Put", "MPI_Accumulate", "MPI_Win_fence"], opduration_stats_for_rank)
 	
@@ -85,7 +93,8 @@ def forma_print_rank_stats(rank_id, total_exec_time, opduration_stats_for_rank):
 
 def forma_print_rank_dt_bounds(rank_id, dt_bounds_stats_for_rank):
 
-	print('Data transfer bounds:')
+	print('Data transfer bounds (nsec) \n' +
+		  '---------------------------')
 	forma_print_stats_x6(["MPI_Get", "MPI_Put", "MPI_Accumulate"], dt_bounds_stats_for_rank)
 	
 	return True
@@ -115,7 +124,7 @@ def forma_print_stats_summary(ranks, wins, opduration_stats, windata_stats, dtbo
 
 
 	print('------------------------------------------------------------------------------------------\n' +
-	'---------------------- [Operation] Durations (seconds)------------------------------------\n')
+	'------------------------ [Operation] Durations (nsec)-------------------------------------\n')
 	forma_print_stats_x6(["Total exec. time", "Total time in RMA", "MPI_Get", "MPI_Put", "MPI_Accumulate", "MPI_Win_fence"], opduration_stats)
 	
 	print('------------------------------------------------------------------------------------------\n' +
