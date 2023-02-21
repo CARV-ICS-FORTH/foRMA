@@ -75,6 +75,7 @@ def forma_calculate_stats_x6(values_vector):
 def forma_merge_dt_bounds_for_epoch(opdata_for_epoch):
 
 	per_opcode_dt_bounds_for_epoch = [[] for i in range(3)]
+	per_opcode_durations_for_epoch = [[] for i in range(4)]
 	epoch_data_vol_sum = 0
 
 	# print(f'opdata for epoch is {opdata_for_epoch}')
@@ -84,13 +85,14 @@ def forma_merge_dt_bounds_for_epoch(opdata_for_epoch):
 	for op in opdata_for_epoch:
 		if op != []: # i.e. take into account this trace parsing fluke where we register the last MPI_Win_fence, which does not belong to an epoch
 			#print(f'operation is {op}')
+			per_opcode_durations_for_epoch[op[0]].append(op[2])
 			if op[0] != 3: 	# i.e. if type != MPI_Win_fence
 				per_opcode_dt_bounds_for_epoch[op[0]].append(op[4])
 				epoch_data_vol_sum = epoch_data_vol_sum + op[3]
 
 	# print(f'per_opcode_dt_bounds_for_epoch after: {per_opcode_dt_bounds_for_epoch}')
 
-	return per_opcode_dt_bounds_for_epoch, epoch_data_vol_sum
+	return per_opcode_dt_bounds_for_epoch, per_opcode_durations_for_epoch, epoch_data_vol_sum
 
 
 
@@ -294,6 +296,28 @@ def forma_calculate_dtbounds_stats_for_epoch(per_opcode_dt_bounds_for_epoch):
 
 	return dtbound_stats_for_epoch
 
+
+def forma_calculate_opduration_stats_for_epoch(per_opcode_durations_for_epoch):
+
+	opduration_stats_for_epoch = [[0]*4 for i in range(3)]
+
+	for i in range(3):
+		opduration_stats_for_epoch[i] = forma_calculate_stats_x4(per_opcode_durations_for_epoch[i])
+
+	return dtbound_stats_for_epoch
+
+
+def forma_calculate_opduration_dtbounds_stats_for_epoch(per_opcode_durations_for_epoch, per_opcode_dt_bounds_for_epoch):
+
+	opduration_stats_for_epoch = [[0]*4 for i in range(4)]
+	dtbound_stats_for_epoch = [[0]*4 for i in range(3)]
+
+	for i in range(4):
+		opduration_stats_for_epoch[i] = forma_calculate_stats_x4(per_opcode_durations_for_epoch[i])
+		if i != 3:
+			dtbound_stats_for_epoch[i] = forma_calculate_stats_x4(per_opcode_dt_bounds_for_epoch[i])
+
+	return opduration_stats_for_epoch, dtbound_stats_for_epoch
 
 
 def forma_calculate_stragglers_for_fence(fence_arrival_times):

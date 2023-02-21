@@ -183,14 +183,26 @@ def per_epoch_stats_to_file(ranks, wins, per_window_data_vol, opdata_per_rank):
 						#print(f'value is {opdata_per_rank[rank][win_id][epoch]}')
 						opdata_for_epoch.append(op)
 				#print(f'opdata_for_epoch: {opdata_for_epoch}')
-				per_opcode_dt_bounds_for_epoch, epoch_data_vol_sum = fs.forma_merge_dt_bounds_for_epoch(opdata_for_epoch)
+				per_opcode_dt_bounds_for_epoch, per_opcode_durations_for_epoch, epoch_data_vol_sum = fs.forma_merge_dt_bounds_for_epoch(opdata_for_epoch)
 
-				dtbound_stats_for_epoch = fs.forma_calculate_dtbounds_stats_for_epoch(per_opcode_dt_bounds_for_epoch)
+				#dtbound_stats_for_epoch = fs.forma_calculate_dtbounds_stats_for_epoch(per_opcode_dt_bounds_for_epoch)
+				##
+				opduration_stats_for_epoch, dtbound_stats_for_epoch = fs.forma_calculate_opduration_dtbounds_stats_for_epoch(per_opcode_durations_for_epoch, per_opcode_dt_bounds_for_epoch)
+				##
+
 				print(f'-------> Epoch {epoch} \n\n' + 
 					f'Total bytes transferred\t\t :   {epoch_data_vol_sum}\n\n' +
 					'DT bound statistics\n' +
 					'-------------------')
-				fo.forma_print_dtbounds_stats_for_epoch(dtbound_stats_for_epoch, epoch_data_vol_sum)
+				fo.forma_print_dtbounds_stats_for_epoch(dtbound_stats_for_epoch)
+
+				##
+				print('Op duration statistics\n' +
+					'-------------------')
+				fo.forma_print_opduration_stats_for_epoch(opduration_stats_for_epoch)
+
+				##
+
 				opdata_for_epoch = []
 				epoch_data_vol_sum = 0
 	sys.stdout = original_stdout # Reset the standard output to its original value

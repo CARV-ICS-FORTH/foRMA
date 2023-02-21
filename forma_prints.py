@@ -139,13 +139,18 @@ def forma_print_stats_summary(ranks, wins, opduration_stats, windata_stats, dtbo
 
 
 
-def forma_print_dtbounds_stats_for_epoch(dtbound_stats_for_epoch, data_vol_for_epoch):
+def forma_print_dtbounds_stats_for_epoch(dtbound_stats_for_epoch):
 
 	forma_print_stats_x4(["MPI_Get", "MPI_Put", "MPI_Accumulate"], dtbound_stats_for_epoch)
 	
 	return True
 
 
+def forma_print_opduration_stats_for_epoch(opduration_stats_for_epoch):
+
+	forma_print_stats_x4(["MPI_Get", "MPI_Put", "MPI_Accumulate", "MPI_Win_fence"], opduration_stats_for_epoch)
+	
+	return True
 
 
 
