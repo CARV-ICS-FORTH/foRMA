@@ -72,7 +72,7 @@ def forma_calculate_stats_x6(values_vector):
 	return output_stats
 
 
-def forma_merge_dt_bounds_for_epoch(opdata_for_epoch):
+def forma_merge_dt_op_durations_for_epoch(opdata_for_epoch):
 
 	per_opcode_dt_bounds_for_epoch = [[] for i in range(3)]
 	per_opcode_durations_for_epoch = [[] for i in range(4)]

@@ -124,7 +124,7 @@ def forma_print_stats_summary(ranks, wins, opduration_stats, windata_stats, dtbo
 
 
 	print('------------------------------------------------------------------------------------------\n' +
-	'------------------------ [Operation] Durations (nsec)-------------------------------------\n')
+	'------------------------ [Operation] Durations (nsec) ------------------------------------\n')
 	forma_print_stats_x6(["Total exec. time", "Total time in RMA", "MPI_Get", "MPI_Put", "MPI_Accumulate", "MPI_Win_fence"], opduration_stats)
 	
 	print('------------------------------------------------------------------------------------------\n' +

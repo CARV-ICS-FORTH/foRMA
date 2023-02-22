@@ -33,6 +33,8 @@ import logging
 from pydumpi import DumpiTrace
 from pydumpi import util
 
+from tabulate import tabulate
+
 import forma_trace as ft
 import forma_parse as fp
 import forma_stats as fs
@@ -164,7 +166,12 @@ is organized by synchronization epochs on that window.
 def per_epoch_stats_to_file(ranks, wins, per_window_data_vol, opdata_per_rank):
 
 	opdata_for_epoch = []
+	per_opcode_dt_bound_aggregates_for_window = [0 for i in range(3)]
+	per_opcode_count_for_window = [0 for i in range(4)]
+	per_opcode_duration_aggregates_for_window = [0 for i in range(4)]
 	epoch_data_vol_sum = 0
+
+	labels = ["MPI_Get", "MPI_Put", "MPI_Accumulate", "MPI_Win_fence"]
 
 	original_stdout = sys.stdout # Save a reference to the original standard output
 	with open('epochs.txt', 'w') as f:
@@ -183,12 +190,30 @@ def per_epoch_stats_to_file(ranks, wins, per_window_data_vol, opdata_per_rank):
 						#print(f'value is {opdata_per_rank[rank][win_id][epoch]}')
 						opdata_for_epoch.append(op)
 				#print(f'opdata_for_epoch: {opdata_for_epoch}')
-				per_opcode_dt_bounds_for_epoch, per_opcode_durations_for_epoch, epoch_data_vol_sum = fs.forma_merge_dt_bounds_for_epoch(opdata_for_epoch)
+				per_opcode_dt_bounds_for_epoch, per_opcode_durations_for_epoch, epoch_data_vol_sum = fs.forma_merge_dt_op_durations_for_epoch(opdata_for_epoch)
+
+				##
+				per_opcode_count_for_window = [sum(i) for i in zip(per_opcode_count_for_window, [len(x) for x in per_opcode_durations_for_epoch])]
+				#print(f'per_opcode_count_for_window: {per_opcode_count_for_window}')
+				##
+
+				print(per_opcode_duration_aggregates_for_window)
 
 				#dtbound_stats_for_epoch = fs.forma_calculate_dtbounds_stats_for_epoch(per_opcode_dt_bounds_for_epoch)
 				##
 				opduration_stats_for_epoch, dtbound_stats_for_epoch = fs.forma_calculate_opduration_dtbounds_stats_for_epoch(per_opcode_durations_for_epoch, per_opcode_dt_bounds_for_epoch)
 				##
+
+				#per_opcode_duration_aggregates_for_window = [sum(i) for i in zip(per_opcode_duration_aggregates_for_window, opduration_stats_for_epoch[:0])]
+				#per_opcode_dt_bound_aggregates_for_window = [sum(i) for i in zip(per_opcode_dt_bound_aggregates_for_window, dtbound_stats_for_epoch[:0])]
+
+				for i in range(4): # i is the opcode in range 0 - MPI_Get, 1 - MPI_Put, 2 - MPI_Acc, 3 - MPI_Win_fence
+					if i != 3:
+						per_opcode_duration_aggregates_for_window[i] = per_opcode_duration_aggregates_for_window[i]+opduration_stats_for_epoch[i][0]
+						per_opcode_dt_bound_aggregates_for_window[i] = per_opcode_dt_bound_aggregates_for_window[i]+dtbound_stats_for_epoch[i][0]
+					else:
+						per_opcode_duration_aggregates_for_window[i] = per_opcode_duration_aggregates_for_window[i]+opduration_stats_for_epoch[i][1]
+
 
 				print(f'-------> Epoch {epoch} \n\n' + 
 					f'Total bytes transferred\t\t :   {epoch_data_vol_sum}\n\n' +
@@ -205,6 +230,32 @@ def per_epoch_stats_to_file(ranks, wins, per_window_data_vol, opdata_per_rank):
 
 				opdata_for_epoch = []
 				epoch_data_vol_sum = 0
+
+			window_summary_rows = [[0 for i in range(3)] for j in range(4)]
+
+			for i in range(4): # each of the opcodes considered
+				window_summary_rows[i][0] = per_opcode_count_for_window[i]
+				if per_opcode_count_for_window[i] != 0:
+					window_summary_rows[i][1] = per_opcode_duration_aggregates_for_window[i] / per_opcode_count_for_window[i]
+					if i != 3:
+						window_summary_rows[i][2] = per_opcode_dt_bound_aggregates_for_window[i] / per_opcode_count_for_window[i]
+
+			print('------------------------------------------------------------------------------------------\n' + 
+				f'SUMMARY for Window {win_id}:\n' + 
+				'-- Op duration and DT bound averages per op code --')
+			print(f'{tabulate([[labels[i]]+window_summary_rows[i] for i in range(4)], headers=["instances", "average duration", "average DT bound"])}\n')
+			print('------------------------------------------------------------------------------------------\n')
+
+			##
+			# per_opcode_dt_bounds_for_window = []
+			# per_opcode_durations_for_window = []
+			##
+
+			per_opcode_duration_aggregates_for_window = [0 for i in range(4)]
+			per_opcode_dt_bound_aggregates_for_window = [0 for i in range(3)]
+			per_opcode_count_for_window = [0 for i in range(4)]
+
+
 	sys.stdout = original_stdout # Reset the standard output to its original value
 	
 	return True
