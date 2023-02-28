@@ -37,6 +37,10 @@ class FormaIMTrace(DumpiTrace):
 		self.total_exec_time = 0
 		self.all_window_sizes = []
 
+		## will use the convention: 0 - MPI_Get, 1 - MPI_Put, 2 - MPI_Acc, 3 - MPI_Win_fence
+		## will add the following: 4 - MPI_Win_create, 5 - MPI_Win_free, 6 - MPI_Init, 7 - MPI_Finalize
+		self.callcount_per_opcode = [0, 0, 0, 0, 0, 0, 0, 0]
+
 
 	def on_init(self, data, thread, cpu_time, wall_time, perf_info):
 		#time_diff = wall_time.stop - wall_time.start
@@ -45,13 +49,15 @@ class FormaIMTrace(DumpiTrace):
 		#self.total_exec_time = cpu_time.start.to_ns()
 		self.total_exec_time = wall_time.start.to_ns()
 
+		self.callcount_per_opcode[6] = self.callcount_per_opcode[6] + 1
+
 		"""
 
 		self.source_file = ctypes.create_string_buffer(data.argv[0].contents.value, 64)
 		print(repr(data.argv[0].contents.value))
 
 		"""
-		
+
 		#self.source_file =pathinfo(data.argv[0].contents.value, 64)
 
 		#print(repr(data.argv[0].contents.value))
@@ -65,12 +71,18 @@ class FormaIMTrace(DumpiTrace):
 		#self.total_exec_time = cpu_time.stop.to_ns()- self.total_exec_time
 		self.total_exec_time = wall_time.stop.to_ns()- self.total_exec_time
 
+		self.callcount_per_opcode[7] = self.callcount_per_opcode[7] + 1
+
+
 
 	def on_win_fence(self, data, thread, cpu_time, wall_time, perf_info):
 		wall_duration = (wall_time.stop - wall_time.start).to_ns()
 		#cpu_duration = (cpu_time.stop - cpu_time.start).to_ns()
 		# count mpi_win_fence occurrences
 		self.fence_count += 1
+
+		self.callcount_per_opcode[3] = self.callcount_per_opcode[3] + 1
+
 
 		## identify window key to use on windows dictionary by looking into wintb
 		win_id = self.wintb[data.win]
@@ -97,6 +109,10 @@ class FormaIMTrace(DumpiTrace):
 		wall_duration = (wall_time.stop - wall_time.start).to_ns()
 		#cpu_duration = (cpu_time.stop - cpu_time.start).to_ns()
 		self.win_count += 1
+
+
+		self.callcount_per_opcode[4] = self.callcount_per_opcode[4] + 1
+
 
 		## on create, I update the window ID to index translation buffer
 		## on free, I will free the corresponding entry
@@ -126,10 +142,18 @@ class FormaIMTrace(DumpiTrace):
 	def on_win_free(self, data, thread, cpu_time, wall_time, perf_info):
 		self.wintb[data.win] = -1
 
+
+		self.callcount_per_opcode[5] = self.callcount_per_opcode[5] + 1
+
+
 	def on_get(self, data, thread, cpu_time, wall_time, perf_info):
 		wall_duration = (wall_time.stop - wall_time.start).to_ns()
 		#cpu_duration = (cpu_time.stop - cpu_time.start).to_ns()
 		win_id = self.wintb[data.win]
+
+
+		self.callcount_per_opcode[0] = self.callcount_per_opcode[0] + 1
+
 
 		""" for vectors that refer to RMA ops, we use the following 
 		convention for indexing: 0 - MPI_Get, 1 - MPI_Put, 2 - MPI_Acc
@@ -137,7 +161,7 @@ class FormaIMTrace(DumpiTrace):
 		"""
 		# opdata = ['g', wall_time.start.to_ns(), cpu_duration, data.origincount*self.type_sizes[data.origintype], 0]
 		#opdata = [0, cpu_time.start.to_ns(), cpu_duration, data.origincount*self.type_sizes[data.origintype], 0]
-		opdata = [0, wall_time.start.to_ns(), wall_duration, data.origincount*self.type_sizes[data.origintype], 0]
+		opdata = [0, wall_time.start.to_ns(), wall_duration, data.origincount*self.type_sizes[data.origintype], data.targetrank]
 
 		win_epoch = self.epochcount_per_window[win_id]
 		self.opdata_per_window[win_id][win_epoch].append(opdata)
@@ -147,13 +171,17 @@ class FormaIMTrace(DumpiTrace):
 		#cpu_duration = (cpu_time.stop - cpu_time.start).to_ns()
 		win_id = self.wintb[data.win]
 
+
+		self.callcount_per_opcode[1] = self.callcount_per_opcode[1] + 1
+
+
 		""" for vectors that refer to RMA ops, we use the following 
 		convention for indexing: 0 - MPI_Get, 1 - MPI_Put, 2 - MPI_Acc
 		and if present, then 3 - MPI_Win_fence
 		"""
 		# opdata = ['p', wall_time.start.to_ns(), cpu_duration, data.origincount*self.type_sizes[data.origintype], 0]
 		#opdata = [1, cpu_time.start.to_ns(), cpu_duration, data.origincount*self.type_sizes[data.origintype], 0]
-		opdata = [1, wall_time.start.to_ns(), wall_duration, data.origincount*self.type_sizes[data.origintype], 0]
+		opdata = [1, wall_time.start.to_ns(), wall_duration, data.origincount*self.type_sizes[data.origintype], data.targetrank]
 
 		win_epoch = self.epochcount_per_window[win_id]
 		self.opdata_per_window[win_id][win_epoch].append(opdata)
@@ -163,13 +191,17 @@ class FormaIMTrace(DumpiTrace):
 		#cpu_duration = (cpu_time.stop - cpu_time.start).to_ns()
 		win_id = self.wintb[data.win]
 
+
+		self.callcount_per_opcode[2] = self.callcount_per_opcode[2] + 1
+
+
 		""" for vectors that refer to RMA ops, we use the following 
 		convention for indexing: 0 - MPI_Get, 1 - MPI_Put, 2 - MPI_Acc
 		and if present, then 3 - MPI_Win_fence
 		"""
 		# opdata = ['a', wall_time.start.to_ns(), cpu_duration, data.origincount*self.type_sizes[data.origintype], 0]
 		#opdata = [2, cpu_time.start.to_ns(), cpu_duration, data.origincount*self.type_sizes[data.origintype], 0]
-		opdata = [2, wall_time.start.to_ns(), wall_duration, data.origincount*self.type_sizes[data.origintype], 0]
+		opdata = [2, wall_time.start.to_ns(), wall_duration, data.origincount*self.type_sizes[data.origintype], data.targetrank]
 
 		win_epoch = self.epochcount_per_window[win_id]
 		self.opdata_per_window[win_id][win_epoch].append(opdata)

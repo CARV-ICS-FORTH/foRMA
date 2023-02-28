@@ -82,7 +82,9 @@ def check_mem_capacity(tracefiles, rma_tracked_calls, rma_callcount_per_rank):
 
 		with ft.FormaIMTrace(tf) as trace:
 			#print(f'Reading footer of {tf}.')
+			#trace.print_footer()
 			fcalls, icalls = trace.read_footer()
+			
 			for name, count in fcalls.items():
 				#if name in {"on_get", "on_put", "on_accumulate", "on_win_fence"}:
 				if name == "on_get": 
@@ -197,8 +199,6 @@ def per_epoch_stats_to_file(ranks, wins, per_window_data_vol, opdata_per_rank):
 				#print(f'per_opcode_count_for_window: {per_opcode_count_for_window}')
 				##
 
-				print(per_opcode_duration_aggregates_for_window)
-
 				#dtbound_stats_for_epoch = fs.forma_calculate_dtbounds_stats_for_epoch(per_opcode_dt_bounds_for_epoch)
 				##
 				opduration_stats_for_epoch, dtbound_stats_for_epoch = fs.forma_calculate_opduration_dtbounds_stats_for_epoch(per_opcode_durations_for_epoch, per_opcode_dt_bounds_for_epoch)
@@ -241,7 +241,9 @@ def per_epoch_stats_to_file(ranks, wins, per_window_data_vol, opdata_per_rank):
 						window_summary_rows[i][2] = per_opcode_dt_bound_aggregates_for_window[i] / per_opcode_count_for_window[i]
 
 			print('------------------------------------------------------------------------------------------\n' + 
-				f'SUMMARY for Window {win_id}:\n' + 
+				f'SUMMARY for Window {win_id}:\n\n' + 
+				f'-- Total bytes transferred\t:   {per_window_data_vol[win_id]}\n' +
+				f'-- Total epochs\t\t\t:   {len(opdata_per_rank[0][win_id])-1}\n\n' +
 				'-- Op duration and DT bound averages per op code --')
 			print(f'{tabulate([[labels[i]]+window_summary_rows[i] for i in range(4)], headers=["instances", "average duration", "average DT bound"])}\n')
 			print('------------------------------------------------------------------------------------------\n')
@@ -252,7 +254,7 @@ def per_epoch_stats_to_file(ranks, wins, per_window_data_vol, opdata_per_rank):
 			##
 
 			per_opcode_duration_aggregates_for_window = [0 for i in range(4)]
-			per_opcode_dt_bound_aggregates_for_window = [0 for i in range(3)]
+			per_opcode_dt_bound_aggregates_for_window = [0 for i in range(3)	]
 			per_opcode_count_for_window = [0 for i in range(4)]
 
 
@@ -384,19 +386,20 @@ def main():
 
 	tracefiles = check_filepaths(dirname, timestamp)
 
+	"""
 	rma_callcount_per_rank = []
 
 	if version=='m':
 		if check_mem_capacity(tracefiles, rma_tracked_calls, rma_callcount_per_rank):
 			print("In-memory version for this trace will exhaust your system's resources. Opt for incremental version instead.")
 			sys.exit(2)
-
+	"""
 	
 	## adjust log level to command line option
 	#logging.basicConfig(level=logging.INFO)
 	logging.basicConfig(level=level)
 
-	ranks, wins, opdata_per_rank, total_exec_times_per_rank, all_window_sizes_per_rank, epochs_per_window_per_rank = fp.forma_parse_traces(tracefiles)
+	ranks, wins, callcount_per_opcode, opdata_per_rank, total_exec_times_per_rank, all_window_sizes_per_rank, epochs_per_window_per_rank = fp.forma_parse_traces(tracefiles)
 	
 	sanity_check = check_consistency(ranks, wins, opdata_per_rank)
 	if sanity_check != 0:
@@ -425,6 +428,7 @@ def main():
 
 
 	per_opcode_op_durations_per_rank, per_opcode_dt_bounds_per_rank, per_window_data_vol = fs.forma_break_down_per_rank_per_window(ranks, wins, opdata_per_rank)
+
 	
 	opdurations, windata, dtbounds = fs.forma_calc_stats_summary(ranks, wins, total_exec_times_per_rank, 
 																all_window_sizes_per_rank[0], 
@@ -440,7 +444,7 @@ def main():
 	print("\n\n\n")
 
 
-	fo.forma_print_stats_summary(ranks, wins, opdurations, windata, dtbounds, rma_callcount_per_rank)
+	fo.forma_print_stats_summary(ranks, wins, opdurations, windata, dtbounds, callcount_per_opcode)
 
 
 
@@ -462,19 +466,23 @@ def main():
 		if action == 'q':
 			sys.exit()
 		elif action == 'e': #
+			print('Preparing results...')
+			per_epoch_stats_to_file(ranks, wins, per_window_data_vol, opdata_per_rank)
 			print('Statistics per epoch (fence-based synchronization) can be found in file epochs.txt\n')
-			per_epoch_stats_to_file(ranks, wins, per_window_data_vol, opdata_per_rank)
 		elif action == 'f':
-			print('Fence statistics can be found in file fences.txt.\n')
+			print('Preparing results...')
 			fence_stats_to_file(ranks, wins, per_window_data_vol, all_window_sizes_per_rank[0], opdata_per_rank)
+			print('Fence statistics can be found in file fences.txt.\n')
 		elif action == 'c':
-			print('Time spent in calls (per rank), as well as data transfer bounds, can be found in file calls.txt\n')
+			print('Preparing results...')
 			per_op_durations_to_file(ranks, total_exec_times_per_rank, per_opcode_op_durations_per_rank, per_opcode_dt_bounds_per_rank)
+			print('Time spent in calls (per rank), as well as data transfer bounds, can be found in file calls.txt\n')
 		elif action == 'a':
-			print('Full analysis broken down per ranks and per windows can be found in files epochs.txt, fences.txt, and calls.txt\n')
+			print('Preparing results...')
 			per_epoch_stats_to_file(ranks, wins, per_window_data_vol, opdata_per_rank)
 			fence_stats_to_file(ranks, wins, per_window_data_vol, all_window_sizes_per_rank[0], opdata_per_rank)
 			per_op_durations_to_file(ranks, total_exec_times_per_rank, per_opcode_op_durations_per_rank, per_opcode_dt_bounds_per_rank)
+			print('Full analysis broken down per ranks and per windows can be found in files epochs.txt, fences.txt, and calls.txt\n')
 		elif action == 'r':
 			pass
 		else:

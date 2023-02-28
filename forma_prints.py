@@ -80,7 +80,7 @@ def forma_print_rank_stats(rank_id, total_exec_time, opduration_stats_for_rank):
 	print('\n------------------------------------------------------------------------------------------\n' + 
 		f'RANK ID: {rank_id} \n\n' +
 		f'-- Total exec. time\t:   {total_exec_time}\n' +
-		f'-- nTotal time in RMA\t:   {rma}\n')
+		f'-- Total time in RMA\t:   {rma}\n')
 
 	print('Op durations (nsec) \n' +
 		  '-------------------')
@@ -107,7 +107,7 @@ def forma_print_window_info(win_info):
 	return True
 
 
-def forma_print_stats_summary(ranks, wins, opduration_stats, windata_stats, dtbound_stats, rma_callcount_per_rank):
+def forma_print_stats_summary(ranks, wins, opduration_stats, windata_stats, dtbound_stats, callcount_per_opcode):
 
 
 	print('------------------------------------------------------------------------------------------\n' + 
@@ -116,10 +116,10 @@ def forma_print_stats_summary(ranks, wins, opduration_stats, windata_stats, dtbo
 		'\n' +
 		f'-- # of ranks\t\t\t:   {ranks}\n' +
 		f'-- # of memory windows\t\t:   {wins}\n' +
-		f'-- # of MPI_Get calls\t\t:   {np.array(rma_callcount_per_rank).sum(axis=0)[0]}\n' +
-		f'-- # of MPI_Put calls\t\t:   {np.array(rma_callcount_per_rank).sum(axis=0)[1]}\n' +
-		f'-- # of MPI_Accumulate calls\t:   {np.array(rma_callcount_per_rank).sum(axis=0)[2]}\n' +
-		f'-- # of MPI_Win_fence calls\t:   {np.array(rma_callcount_per_rank).sum(axis=0)[3]}\n' +
+		f'-- # of MPI_Get calls\t\t:   {callcount_per_opcode[0]}\n' +
+		f'-- # of MPI_Put calls\t\t:   {callcount_per_opcode[1]}\n' +
+		f'-- # of MPI_Accumulate calls\t:   {callcount_per_opcode[2]}\n' +
+		f'-- # of MPI_Win_fence calls\t:   {callcount_per_opcode[3]}\n' +
 		'\n')
 
 
@@ -128,8 +128,8 @@ def forma_print_stats_summary(ranks, wins, opduration_stats, windata_stats, dtbo
 	forma_print_stats_x6(["Total exec. time", "Total time in RMA", "MPI_Get", "MPI_Put", "MPI_Accumulate", "MPI_Win_fence"], opduration_stats)
 	
 	print('------------------------------------------------------------------------------------------\n' +
-	'---------------------------- Data Sizes Transferred --------------------------------------\n')
-	forma_print_stats_x4(["Size (B)", "Bytes transferred/win.", "Epochs per win."], windata_stats)
+	'---------------------------- Data Sizes --------------------------------------------------\n')
+	forma_print_stats_x4(["Window sizes (B)", "Bytes transferred/win.", "Epochs per win."], windata_stats)
 
 	print('------------------------------------------------------------------------------------------\n' +
 	'-------------------------- Data Transfer Bounds ------------------------------------------\n')
