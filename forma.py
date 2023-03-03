@@ -399,7 +399,7 @@ def main():
 	#logging.basicConfig(level=logging.INFO)
 	logging.basicConfig(level=level)
 
-	ranks, wins, callcount_per_opcode, opdata_per_rank, total_exec_times_per_rank, all_window_sizes_per_rank, epochs_per_window_per_rank = fp.forma_parse_traces(tracefiles)
+	ranks, wins, callcount_per_opcode, opdata_per_rank, total_exec_times_per_rank, all_window_sizes_per_rank, all_window_durations_per_rank, epochs_per_window_per_rank = fp.forma_parse_traces(tracefiles)
 	
 	sanity_check = check_consistency(ranks, wins, opdata_per_rank)
 	if sanity_check != 0:
@@ -432,6 +432,7 @@ def main():
 	
 	opdurations, windata, dtbounds = fs.forma_calc_stats_summary(ranks, wins, total_exec_times_per_rank, 
 																all_window_sizes_per_rank[0], 
+																all_window_durations_per_rank,
 																epochs_per_window_per_rank[0], 
 																per_opcode_op_durations_per_rank, 
 																per_opcode_dt_bounds_per_rank, 
@@ -446,8 +447,7 @@ def main():
 
 	fo.forma_print_stats_summary(ranks, wins, opdurations, windata, dtbounds, callcount_per_opcode)
 
-
-
+	#print(all_window_durations_per_rank)
 	
 	while action != 'q':
 		if (not cmdlnaction):

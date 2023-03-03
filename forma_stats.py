@@ -143,13 +143,16 @@ def forma_calc_opduration_summary(ranks, total_exec_times_per_rank, per_opcode_o
 	return opduration_stats
 
 
-def forma_calc_windata_summary(wins, all_window_sizes, per_window_data_vol, epochs_per_window):
+def forma_calc_windata_summary(wins, all_window_sizes, all_window_durations_per_rank, per_window_data_vol, epochs_per_window):
 
-	windata_stats = [[9]*4 for i in range(3)]
+	windata_stats = [[9]*4 for i in range(4)]
+
+	all_window_durations = [j[1] for sub in all_window_durations_per_rank for j in sub]
 
 	windata_stats[0] = forma_calculate_stats_x4(all_window_sizes)
 	windata_stats[1] = forma_calculate_stats_x4(per_window_data_vol)
 	windata_stats[2] = forma_calculate_stats_x4(epochs_per_window)
+	windata_stats[3] = forma_calculate_stats_x4(all_window_durations)
 	return windata_stats
 
 
@@ -165,7 +168,8 @@ def forma_calc_dtbounds_summary(per_opcode_dt_bounds):
 
 
 def forma_calc_stats_summary(ranks, wins, total_exec_times_per_rank, 
-							all_window_sizes, epochs_per_window, 
+							all_window_sizes, all_window_durations_per_rank,
+							epochs_per_window, 
 							per_opcode_op_durations_per_rank, 
 							per_opcode_dt_bounds_per_rank, 
 							per_window_data_vol):
@@ -198,7 +202,7 @@ def forma_calc_stats_summary(ranks, wins, total_exec_times_per_rank,
 													per_opcode_op_durations)
 
 	windata_stats = forma_calc_windata_summary(wins, 
-											all_window_sizes, 
+											all_window_sizes, all_window_durations_per_rank,
 											per_window_data_vol, 
 											epochs_per_window)
 

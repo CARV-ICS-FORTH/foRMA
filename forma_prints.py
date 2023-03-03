@@ -128,8 +128,8 @@ def forma_print_stats_summary(ranks, wins, opduration_stats, windata_stats, dtbo
 	forma_print_stats_x6(["Total exec. time", "Total time in RMA", "MPI_Get", "MPI_Put", "MPI_Accumulate", "MPI_Win_fence"], opduration_stats)
 	
 	print('------------------------------------------------------------------------------------------\n' +
-	'---------------------------- Data Sizes --------------------------------------------------\n')
-	forma_print_stats_x4(["Window sizes (B)", "Bytes transferred/win.", "Epochs per win."], windata_stats)
+	'---------------------------- Memory Windows ----------------------------------------------\n')
+	forma_print_stats_x4(["Window sizes (B)", "Bytes transferred/win.", "Epochs per win.", "Window durations (s)"], windata_stats)
 
 	print('------------------------------------------------------------------------------------------\n' +
 	'-------------------------- Data Transfer Bounds ------------------------------------------\n')

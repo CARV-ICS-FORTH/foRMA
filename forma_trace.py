@@ -37,6 +37,8 @@ class FormaIMTrace(DumpiTrace):
 		self.total_exec_time = 0
 		self.all_window_sizes = []
 
+		self.all_window_durations = []
+
 		## will use the convention: 0 - MPI_Get, 1 - MPI_Put, 2 - MPI_Acc, 3 - MPI_Win_fence
 		## will add the following: 4 - MPI_Win_create, 5 - MPI_Win_free, 6 - MPI_Init, 7 - MPI_Finalize
 		self.callcount_per_opcode = [0, 0, 0, 0, 0, 0, 0, 0]
@@ -110,9 +112,7 @@ class FormaIMTrace(DumpiTrace):
 		#cpu_duration = (cpu_time.stop - cpu_time.start).to_ns()
 		self.win_count += 1
 
-
 		self.callcount_per_opcode[4] = self.callcount_per_opcode[4] + 1
-
 
 		## on create, I update the window ID to index translation buffer
 		## on free, I will free the corresponding entry
@@ -139,11 +139,25 @@ class FormaIMTrace(DumpiTrace):
 
 		self.all_window_sizes.append(data.size)
 
+		self.all_window_durations.append([wall_duration, wall_time.start.to_ns(), 0])
+
+
 	def on_win_free(self, data, thread, cpu_time, wall_time, perf_info):
+		wall_duration = (wall_time.stop - wall_time.start).to_ns()
+		#cpu_duration = (cpu_time.stop - cpu_time.start).to_ns()
+		
+		win_id = self.wintb[data.win]
 		self.wintb[data.win] = -1
 
-
 		self.callcount_per_opcode[5] = self.callcount_per_opcode[5] + 1
+
+		window_start_time = self.all_window_durations[win_id][1]
+
+		window_life_time = (wall_time.stop.to_ns() - window_start_time)
+
+		## each element is of all_window_durations contains info for window with ID data.win and is of the form:
+		## [ MPI_Win_create wall clock duration,  total window life time (wall clock), MPI_Win_free wall clock duration]		
+		self.all_window_durations[win_id] = [self.all_window_durations[win_id][0], window_life_time, wall_duration]
 
 
 	def on_get(self, data, thread, cpu_time, wall_time, perf_info):

@@ -42,6 +42,7 @@ def forma_parse_traces(tracefiles):
 	opdata_per_rank = []
 	total_exec_time_per_rank = []
 	all_window_sizes_per_rank = []
+	all_window_durations_per_rank = []
 	epochs_per_window_per_rank = []
 	callcount_per_opcode = [0, 0, 0, 0, 0, 0, 0, 0]
 
@@ -57,6 +58,7 @@ def forma_parse_traces(tracefiles):
 		opdata_per_rank.append(trace.opdata_per_window)
 		total_exec_time_per_rank.append(trace.total_exec_time)
 		all_window_sizes_per_rank.append(trace.all_window_sizes)
+		all_window_durations_per_rank.append(trace.all_window_durations)
 		epochs_per_window_per_rank.append(trace.epochcount_per_window)
 
 		callcount_per_opcode = [sum(i) for i in zip(callcount_per_opcode, trace.callcount_per_opcode)]
@@ -68,7 +70,7 @@ def forma_parse_traces(tracefiles):
 		#sourcefile = trace.source_file
 		#print(f'current trace produced by a run of source code : {sourcefile}')
 
-	return rank, trace.win_count, callcount_per_opcode, opdata_per_rank, total_exec_time_per_rank, all_window_sizes_per_rank, epochs_per_window_per_rank
+	return rank, trace.win_count, callcount_per_opcode, opdata_per_rank, total_exec_time_per_rank, all_window_sizes_per_rank, all_window_durations_per_rank, epochs_per_window_per_rank
 
 
 
