@@ -81,26 +81,26 @@ def check_mem_capacity(tracefiles, rma_tracked_calls, rma_callcount_per_rank):
 		rma_occurrences_for_rank = [0,0,0,0]
 
 		with ft.FormaIMTrace(tf) as trace:
-			#print(f'Reading footer of {tf}.')
-			#trace.print_footer()
+			print(f'Reading footer of {tf}.')
+			trace.print_footer()
 			fcalls, icalls = trace.read_footer()
 			
 			for name, count in fcalls.items():
 				#if name in {"on_get", "on_put", "on_accumulate", "on_win_fence"}:
 				if name == "on_get": 
-					#print("  {0}: {1}".format(name, count))
+					print("  {0}: {1}".format(name, count))
 					rma_occurrences_for_rank[0] = count
 					total_rma_occurrences += count
 				if name == "on_put": 
-					#print("  {0}: {1}".format(name, count))
+					print("  {0}: {1}".format(name, count))
 					rma_occurrences_for_rank[1] = count
 					total_rma_occurrences += count
 				if name == "on_accumulate": 
-					#print("  {0}: {1}".format(name, count))
+					print("  {0}: {1}".format(name, count))
 					rma_occurrences_for_rank[2] = count
 					total_rma_occurrences += count
 				if name == "on_win_fence": 
-					#print("  {0}: {1}".format(name, count))
+					print("  {0}: {1}".format(name, count))
 					rma_occurrences_for_rank[3] = count
 					total_rma_occurrences += count
 
@@ -165,15 +165,16 @@ file epochs.txt. Data is calculated by memory window found in
 the execution. For each memory window, the relevant information 
 is organized by synchronization epochs on that window. 
 """
-def per_epoch_stats_to_file(ranks, wins, per_window_data_vol, opdata_per_rank):
+def per_epoch_stats_to_file(ranks, wins, per_window_data_vol, opdata_per_rank, all_window_durations_per_rank):
 
 	opdata_for_epoch = []
 	per_opcode_dt_bound_aggregates_for_window = [0 for i in range(3)]
 	per_opcode_count_for_window = [0 for i in range(4)]
 	per_opcode_duration_aggregates_for_window = [0 for i in range(4)]
 	epoch_data_vol_sum = 0
+	win_duration = [[0,1,2,3], [4,5,6,7]]
 
-	labels = ["MPI_Get", "MPI_Put", "MPI_Accumulate", "MPI_Win_fence"]
+	labels = ["- MPI_Get", "- MPI_Put", "- MPI_Accumulate", "- MPI_Win_fence"]
 
 	original_stdout = sys.stdout # Save a reference to the original standard output
 	with open('epochs.txt', 'w') as f:
@@ -240,12 +241,17 @@ def per_epoch_stats_to_file(ranks, wins, per_window_data_vol, opdata_per_rank):
 					if i != 3:
 						window_summary_rows[i][2] = per_opcode_dt_bound_aggregates_for_window[i] / per_opcode_count_for_window[i]
 
+
+			win_duration[0]	= fs.forma_calculate_stats_x4([all_window_durations_per_rank[i][win_id][0] for i in range(ranks)])
+			win_duration[1] = fs.forma_calculate_stats_x4([all_window_durations_per_rank[i][win_id][1] for i in range(ranks)])
+
 			print('------------------------------------------------------------------------------------------\n' + 
 				f'SUMMARY for Window {win_id}:\n\n' + 
 				f'-- Total bytes transferred\t:   {per_window_data_vol[win_id]}\n' +
 				f'-- Total epochs\t\t\t:   {len(opdata_per_rank[0][win_id])-1}\n\n' +
 				'-- Op duration and DT bound averages per op code --')
 			print(f'{tabulate([[labels[i]]+window_summary_rows[i] for i in range(4)], headers=["instances", "average duration", "average DT bound"])}\n')
+			print(f'{tabulate([["MPI_Win_create duration"]+win_duration[0], ["Window lifetime"]+win_duration[1]], headers=["aggregate", "min", "max", "average"])}\n')
 			print('------------------------------------------------------------------------------------------\n')
 
 			##
@@ -355,7 +361,7 @@ def main():
 			print ('usage: ' + str(sys.argv[0]) + ' -d <directory name> -t <timestamp> [ -a <action> ] [ -v <version>]')
 			sys.exit(2)
 		else:
-			opts, args = getopt.getopt(argv, 'd:t:a:v:l:')
+			opts, args = getopt.getopt(argv, 'd:t:a:l:')
 			for o, a in opts:
 				if o == "-d": 
 					dirname = a
@@ -364,8 +370,8 @@ def main():
 				elif o == "-a":
 					action = a
 					cmdlnaction = True
-				elif o == "-v":
-					version = a
+				#elif o == "-v":
+					#version = a
 				elif o == "-l":
 					level=set_log_level(a)
 					if level is None:
@@ -386,9 +392,10 @@ def main():
 
 	tracefiles = check_filepaths(dirname, timestamp)
 
-	"""
+	
 	rma_callcount_per_rank = []
-
+	check_mem_capacity(tracefiles, rma_tracked_calls, rma_callcount_per_rank)
+	"""
 	if version=='m':
 		if check_mem_capacity(tracefiles, rma_tracked_calls, rma_callcount_per_rank):
 			print("In-memory version for this trace will exhaust your system's resources. Opt for incremental version instead.")
@@ -467,7 +474,7 @@ def main():
 			sys.exit()
 		elif action == 'e': #
 			print('Preparing results...')
-			per_epoch_stats_to_file(ranks, wins, per_window_data_vol, opdata_per_rank)
+			per_epoch_stats_to_file(ranks, wins, per_window_data_vol, opdata_per_rank, all_window_durations_per_rank)
 			print('Statistics per epoch (fence-based synchronization) can be found in file epochs.txt\n')
 		elif action == 'f':
 			print('Preparing results...')
@@ -479,7 +486,7 @@ def main():
 			print('Time spent in calls (per rank), as well as data transfer bounds, can be found in file calls.txt\n')
 		elif action == 'a':
 			print('Preparing results...')
-			per_epoch_stats_to_file(ranks, wins, per_window_data_vol, opdata_per_rank)
+			per_epoch_stats_to_file(ranks, wins, per_window_data_vol, opdata_per_rank, all_window_durations_per_rank)
 			fence_stats_to_file(ranks, wins, per_window_data_vol, all_window_sizes_per_rank[0], opdata_per_rank)
 			per_op_durations_to_file(ranks, total_exec_times_per_rank, per_opcode_op_durations_per_rank, per_opcode_dt_bounds_per_rank)
 			print('Full analysis broken down per ranks and per windows can be found in files epochs.txt, fences.txt, and calls.txt\n')

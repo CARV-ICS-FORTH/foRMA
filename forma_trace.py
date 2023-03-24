@@ -10,6 +10,7 @@ import ctypes
 
 import logging
 
+from pydumpi import dtypes
 from pydumpi import DumpiTrace
 
 
@@ -43,6 +44,8 @@ class FormaIMTrace(DumpiTrace):
 		## will add the following: 4 - MPI_Win_create, 5 - MPI_Win_free, 6 - MPI_Init, 7 - MPI_Finalize
 		self.callcount_per_opcode = [0, 0, 0, 0, 0, 0, 0, 0]
 
+		self.myProfile = ctypes.POINTER(dtypes.DumpiProfile)
+
 
 	def on_init(self, data, thread, cpu_time, wall_time, perf_info):
 		#time_diff = wall_time.stop - wall_time.start
@@ -65,6 +68,13 @@ class FormaIMTrace(DumpiTrace):
 		#print(repr(data.argv[0].contents.value))
 
 		#print(data.argv[0].contents.value) #.contents.contents.value 
+
+
+		#self.wallOffset = (self._profile).cpu_time_offset
+		print(f'\nDUMPI TRACE READING HEADER: {self.read_header().starttime}')
+
+		self.myProfile = self._profile
+		print(f'DUMPI TRACE WALL OFFSET: {self.myProfile.contents.wall_time_offset}')
 
 	def on_finalize(self, data, thread, cpu_time, wall_time, perf_info):
 		#time_diff = wall_time.stop - wall_time.start
