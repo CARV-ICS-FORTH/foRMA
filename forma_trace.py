@@ -8,6 +8,17 @@ import fnmatch
 
 import ctypes
 
+import csv
+import pickle
+import pyarrow as pa
+import pyarrow.parquet as pq
+
+import avro.schema
+from avro.datafile import DataFileReader, DataFileWriter
+from avro.io import DatumReader, DatumWriter
+
+from fastavro import reader
+
 import logging
 
 from pydumpi import dtypes
@@ -20,7 +31,7 @@ from pydumpi import DumpiTrace
 
 class FormaIMTrace(DumpiTrace):
 
-	def __init__(self, file_name):
+	def __init__(self, file_name): #, csv_filename, pickle_filename, parquet_filename):
 		super().__init__(file_name)
 		self.fence_count = 0
 		self.win_count = 0
@@ -46,6 +57,21 @@ class FormaIMTrace(DumpiTrace):
 
 		self.myProfile = ctypes.POINTER(dtypes.DumpiProfile)
 
+		# self.myCsv = open(csv_filename, 'w')
+		# self.writer = csv.writer(self.myCsv)
+
+		# self.myPickle = open(pickle_filename, 'wb')
+
+		# table = pa.Table.from_arrays([[0, 0, 0, 0, 0]], names=["col1"])
+
+		# self.PqFilename = parquet_filename
+
+		# self.pqwriter = pq.ParquetWriter(self.PqFilename, table.schema)
+
+		# schema = avro.schema.parse(open("opdata.avsc", "rb").read())
+
+		# self.avroWriter = DataFileWriter(open(file_name+".avro", "wb"), DatumWriter(), schema)
+		
 
 	def on_init(self, data, thread, cpu_time, wall_time, perf_info):
 		#time_diff = wall_time.stop - wall_time.start
@@ -71,10 +97,10 @@ class FormaIMTrace(DumpiTrace):
 
 
 		#self.wallOffset = (self._profile).cpu_time_offset
-		print(f'\nDUMPI TRACE READING HEADER: {self.read_header().starttime}')
+		# print(f'\nDUMPI TRACE READING HEADER: {self.read_header().starttime}')
 
-		self.myProfile = self._profile
-		print(f'DUMPI TRACE WALL OFFSET: {self.myProfile.contents.wall_time_offset}')
+		# self.myProfile = self._profile
+		# print(f'DUMPI TRACE WALL OFFSET: {self.myProfile.contents.wall_time_offset}')
 
 	def on_finalize(self, data, thread, cpu_time, wall_time, perf_info):
 		#time_diff = wall_time.stop - wall_time.start
@@ -84,6 +110,11 @@ class FormaIMTrace(DumpiTrace):
 		self.total_exec_time = wall_time.stop.to_ns()- self.total_exec_time
 
 		self.callcount_per_opcode[7] = self.callcount_per_opcode[7] + 1
+
+		#self.myCsv.close()
+		#self.myPickle.close()
+		#self.pqwriter.close()
+		#self.avroWriter.close()
 
 
 
@@ -97,7 +128,13 @@ class FormaIMTrace(DumpiTrace):
 
 
 		## identify window key to use on windows dictionary by looking into wintb
-		win_id = self.wintb[data.win]
+		#win_id = self.wintb[data.win]
+		try:
+			win_id = self.wintb[data.win]
+		except KeyError:
+			print(f'Key {data.win} not in wintb!')
+			sys.exit(1)
+
 		""" for vectors that refer to RMA ops, we use the following 
 		convention for indexing: 0 - MPI_Get, 1 - MPI_Put, 2 - MPI_Acc
 		and if present, then 3 - MPI_Win_fence
@@ -116,6 +153,15 @@ class FormaIMTrace(DumpiTrace):
 		## first fence ever on 
 		self.epochcount_per_window[win_id]+=1
 
+		# self.writer.writerow(opdata)
+		# pickle.dump(opdata, self.myPickle)
+		# table = pa.Table.from_arrays([opdata], names=["col1"])
+		# #pq.write_table(table, self.PqFilename, compression=None)
+		# self.pqwriter.write_table(table)
+
+		# self.avroWriter.append({"opcode": 3, "wt_start": wall_time.start.to_ns(), "wt_duration": wall_duration, "numbytes": wall_time.stop.to_ns(), "tg_rank": 0})
+
+
 
 	def on_win_create(self, data, thread, cpu_time, wall_time, perf_info):
 		wall_duration = (wall_time.stop - wall_time.start).to_ns()
@@ -131,6 +177,7 @@ class FormaIMTrace(DumpiTrace):
 			if data.win in (self.wintb).keys(): ## if NOT empty and key already exists... 
 				if (self.wintb[data.win] != -1): ## ... check value, in case on_win_free has not yet been called on it
 					print(f'COLLISION ON WINDOW ID {data.win}')
+					#sys.exit(1)
 			#print('window tb not empty, key does not exist') 
 			## otherwise, not empty, but key does not exist yet
 			self.wintb[data.win] = self.win_count-1
@@ -152,11 +199,17 @@ class FormaIMTrace(DumpiTrace):
 		self.all_window_durations.append([wall_duration, wall_time.start.to_ns(), 0])
 
 
+
 	def on_win_free(self, data, thread, cpu_time, wall_time, perf_info):
 		wall_duration = (wall_time.stop - wall_time.start).to_ns()
 		#cpu_duration = (cpu_time.stop - cpu_time.start).to_ns()
 		
-		win_id = self.wintb[data.win]
+		try:
+			win_id = self.wintb[data.win]
+		except KeyError:
+			print(f'Key {data.win} not in wintb!')
+			sys.exit(1)
+
 		self.wintb[data.win] = -1
 
 		self.callcount_per_opcode[5] = self.callcount_per_opcode[5] + 1
@@ -173,8 +226,12 @@ class FormaIMTrace(DumpiTrace):
 	def on_get(self, data, thread, cpu_time, wall_time, perf_info):
 		wall_duration = (wall_time.stop - wall_time.start).to_ns()
 		#cpu_duration = (cpu_time.stop - cpu_time.start).to_ns()
-		win_id = self.wintb[data.win]
-
+		
+		try:
+			win_id = self.wintb[data.win]
+		except KeyError:
+			print(f'Key {data.win} not in wintb!')
+			sys.exit(1)
 
 		self.callcount_per_opcode[0] = self.callcount_per_opcode[0] + 1
 
@@ -190,10 +247,25 @@ class FormaIMTrace(DumpiTrace):
 		win_epoch = self.epochcount_per_window[win_id]
 		self.opdata_per_window[win_id][win_epoch].append(opdata)
 
+		# self.writer.writerow(opdata)
+		# pickle.dump(opdata, self.myPickle)
+		# table = pa.Table.from_arrays([opdata], names=["col1"])
+		# #pq.write_table(table, self.PqFilename, compression=None)
+		# self.pqwriter.write_table(table)
+
+		# self.avroWriter.append({"opcode": 0, "wt_start": wall_time.start.to_ns(), "wt_duration": wall_duration, "numbytes": data.origincount*self.type_sizes[data.origintype], "tg_rank": data.targetrank})
+
+
+
 	def on_put(self, data, thread, cpu_time, wall_time, perf_info):
 		wall_duration = (wall_time.stop - wall_time.start).to_ns()
 		#cpu_duration = (cpu_time.stop - cpu_time.start).to_ns()
-		win_id = self.wintb[data.win]
+
+		try:
+			win_id = self.wintb[data.win]
+		except KeyError:
+			print(f'Key {data.win} not in wintb!')
+			sys.exit(1)
 
 
 		self.callcount_per_opcode[1] = self.callcount_per_opcode[1] + 1
@@ -210,10 +282,25 @@ class FormaIMTrace(DumpiTrace):
 		win_epoch = self.epochcount_per_window[win_id]
 		self.opdata_per_window[win_id][win_epoch].append(opdata)
 
+		# self.writer.writerow(opdata)
+		# pickle.dump(opdata, self.myPickle)
+		# table = pa.Table.from_arrays([opdata], names=["col1"])
+		# #pq.write_table(table, self.PqFilename, compression=None)
+		# self.pqwriter.write_table(table)
+
+		# self.avroWriter.append({"opcode": 1, "wt_start": wall_time.start.to_ns(), "wt_duration": wall_duration, "numbytes": data.origincount*self.type_sizes[data.origintype], "tg_rank": data.targetrank})
+
+
+
 	def on_accumulate(self, data, thread, cpu_time, wall_time, perf_info):
 		wall_duration = (wall_time.stop - wall_time.start).to_ns()
 		#cpu_duration = (cpu_time.stop - cpu_time.start).to_ns()
-		win_id = self.wintb[data.win]
+
+		try:
+			win_id = self.wintb[data.win]
+		except KeyError:
+			print(f'Key {data.win} not in wintb!')
+			sys.exit(1)
 
 
 		self.callcount_per_opcode[2] = self.callcount_per_opcode[2] + 1
@@ -229,3 +316,11 @@ class FormaIMTrace(DumpiTrace):
 
 		win_epoch = self.epochcount_per_window[win_id]
 		self.opdata_per_window[win_id][win_epoch].append(opdata)
+
+		# self.writer.writerow(opdata)
+		# pickle.dump(opdata, self.myPickle)
+		# table = pa.Table.from_arrays([opdata], names=["col1"])
+		# #pq.write_table(table, self.PqFilename, compression=None)
+		# self.pqwriter.write_table(table)
+
+		# self.avroWriter.append({"opcode": 2, "wt_start": wall_time.start.to_ns(), "wt_duration": wall_duration, "numbytes": data.origincount*self.type_sizes[data.origintype], "tg_rank": data.targetrank})

@@ -64,7 +64,11 @@ def check_filepaths(dirname, timestamp):
 	total_file_size = total_file_size/1024
 
 	## Read metafile and print it -- TODO: to be used more extensively later
-	metafile = util.read_meta_file(str(dirname)+'/dumpi-'+format(str(timestamp))+'.meta')
+	try:
+		metafile = util.read_meta_file(str(dirname)+'/dumpi-'+format(str(timestamp))+'.meta')
+	except FileNotFoundError:
+		print('Trace files not found. Check timestamp formatting (-t option).\n\n')
+		sys.exit(1)
 
 	print(f'\nAbout to parse a total of {round(total_file_size)} KBytes of binary trace files size.\n')
 
@@ -82,7 +86,7 @@ def check_mem_capacity(tracefiles, rma_tracked_calls, rma_callcount_per_rank):
 
 		with ft.FormaIMTrace(tf) as trace:
 			print(f'Reading footer of {tf}.')
-			trace.print_footer()
+			#trace.print_footer()
 			fcalls, icalls = trace.read_footer()
 			
 			for name, count in fcalls.items():
@@ -394,7 +398,7 @@ def main():
 
 	
 	rma_callcount_per_rank = []
-	check_mem_capacity(tracefiles, rma_tracked_calls, rma_callcount_per_rank)
+	#check_mem_capacity(tracefiles, rma_tracked_calls, rma_callcount_per_rank)
 	"""
 	if version=='m':
 		if check_mem_capacity(tracefiles, rma_tracked_calls, rma_callcount_per_rank):

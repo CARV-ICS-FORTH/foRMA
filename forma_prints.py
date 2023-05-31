@@ -129,7 +129,7 @@ def forma_print_stats_summary(ranks, wins, opduration_stats, windata_stats, dtbo
 	
 	print('------------------------------------------------------------------------------------------\n' +
 	'---------------------------- Memory Windows ----------------------------------------------\n')
-	forma_print_stats_x4(["Window sizes (B)", "Bytes transferred/win.", "Epochs per win.", "Window durations (s)"], windata_stats)
+	forma_print_stats_x4(["Window sizes (B)", "Bytes transferred/win.", "Epochs per win.", "Window durations (nsec)"], windata_stats)
 
 	print('------------------------------------------------------------------------------------------\n' +
 	'-------------------------- Data Transfer Bounds ------------------------------------------\n')

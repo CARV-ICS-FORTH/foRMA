@@ -27,10 +27,21 @@ import fnmatch
 
 import ctypes
 
+import csv
+import pickle
+import pyarrow as pa
+
+# import avro.schema
+# from avro.datafile import DataFileReader, DataFileWriter
+# from fastavro import reader
 
 import logging
 
 from pydumpi import DumpiTrace
+
+import numpy as np
+
+from pympler import asizeof
 
 
 import forma_trace as ft
@@ -47,6 +58,12 @@ def forma_parse_traces(tracefiles):
 	callcount_per_opcode = [0, 0, 0, 0, 0, 0, 0, 0]
 
 	for tracefile in tracefiles:
+
+		# csv_file = tracefile+".csv"
+		# pickle_file = tracefile+".pickle"
+		# parquet_file = tracefile+".parquet"
+
+		# with ft.FormaIMTrace(tracefile, csv_file, pickle_file, parquet_file) as trace:
 		with ft.FormaIMTrace(tracefile) as trace:
 			## keeping next line in order to remember where to find sizes in -- check pydumpi/undumpi.py
 
@@ -61,6 +78,19 @@ def forma_parse_traces(tracefiles):
 		all_window_durations_per_rank.append(trace.all_window_durations)
 		epochs_per_window_per_rank.append(trace.epochcount_per_window)
 
+		##
+		# temp = np.array(trace.opdata_per_window, dtype=object) 
+		# flatarray = np.concatenate(temp).ravel()
+		# print(flatarray)
+		# #binarray = np.array(flatarray, dtype='i4')
+		# print(f'Size of opdata for rank: {asizeof.asizeof(trace.opdata_per_window)}')
+		# print(f'Size of flattened list: {asizeof.asizeof(flatarray)}')
+		# print(f'Size of flattened list data: {asizeof.asizeof(flatarray.data)}')
+		#print(f'Size of binary list: {asizeof.asizeof(binarray)}')
+		#np.savez("flatarraytest"+str(rank), flatarray)
+		#flatarray.astype('i4').tofile("flatarraytest"+str(rank))
+		##
+
 		callcount_per_opcode = [sum(i) for i in zip(callcount_per_opcode, trace.callcount_per_opcode)]
 
 		#print(f'current trace produced by a run of source code : {(c_char * trace.source_file).from_address(0)}')
@@ -69,6 +99,18 @@ def forma_parse_traces(tracefiles):
 
 		#sourcefile = trace.source_file
 		#print(f'current trace produced by a run of source code : {sourcefile}')
+
+
+		# with open(tracefile+".avro", 'rb') as file_object: 
+		# 	csv_file = csv.writer(open(tracefile+".rc.csv", "w+")) 
+		# 	head = True 
+		# 	for emp in reader(file_object): 
+		# 		if head: # write
+		# 			header = emp.keys() 
+		# 			csv_file.writerow(header) 
+		# 			head = False # write normal row 
+		# 		csv_file.writerow(emp.values())
+
 
 	return rank, trace.win_count, callcount_per_opcode, opdata_per_rank, total_exec_time_per_rank, all_window_sizes_per_rank, all_window_durations_per_rank, epochs_per_window_per_rank
 
