@@ -17,7 +17,9 @@
 #
 ###################################################################################
 
-
+__all__ = ["forma"]
+__author__ = "Lena Kanellou"
+__version__ = "0.1.1"
 
 import getopt 
 import sys 
@@ -27,14 +29,6 @@ import fnmatch
 
 import ctypes
 
-import csv
-import pickle
-import pyarrow as pa
-
-# import avro.schema
-# from avro.datafile import DataFileReader, DataFileWriter
-# from fastavro import reader
-
 import logging
 
 from pydumpi import DumpiTrace
@@ -43,96 +37,47 @@ import numpy as np
 
 from pympler import asizeof
 
-
 import forma_trace as ft
+import forma_aux as fa
+import forma_classes as fc
+import forma_logging as fl
+import forma_constants as fx
 
 
 def forma_parse_traces(tracefiles):
 
-	rank = 0
-	opdata_per_rank = []
-	total_exec_time_per_rank = []
-	all_window_sizes_per_rank = []
-	all_window_durations_per_rank = []
-	epochs_per_window_per_rank = []
-	callcount_per_opcode = [0, 0, 0, 0, 0, 0, 0, 0]
+
+	exec_summary = fc.formaSummary()
+
+	ranks = 0
+	wins = 0
+	exec_time = 0
+
+	fl.forma_logger.debug('Inside forma parse traces.')
 
 	for tracefile in tracefiles:
+		with ft.FormaSTrace(tracefile) as trace:
+			fl.forma_print(f'Now parsing {tracefile}.\n')
 
-		# csv_file = tracefile+".csv"
-		# pickle_file = tracefile+".pickle"
-		# parquet_file = tracefile+".parquet"
+			trace.read_stream() ## this will activate the callbacks and the computations therein.
 
-		# with ft.FormaIMTrace(tracefile, csv_file, pickle_file, parquet_file) as trace:
-		with ft.FormaIMTrace(tracefile) as trace:
-			## keeping next line in order to remember where to find sizes in -- check pydumpi/undumpi.py
+			# fl.forma_logger.debug(f'Callcount for rank: {trace.trace_summary.callcount_per_opcode}\n' +
+			# 	f'Win count for rank: {trace.trace_summary.wins}\n' +
+			# 	f'Rank count initialized to: {trace.trace_summary.ranks}\n' +
+			# 	f'Execution time: {trace.trace_summary.exectime}\n' +
+			# 	f'Total RMA time: {trace.trace_summary.rmatime}\n' + 
+			# 	f'Opduration metrics: {trace.trace_summary.opdurations}\n' +
+			# 	f'Data transfer sizes metrics: {trace.trace_summary.xfer_per_opcode}\n' +
+			# 	f'Window size stats: {trace.trace_summary.winsizes}\n' + 
+			# 	f'Epochs/window stats: {trace.trace_summary.epochs}\n' +
+			# 	f'Window lifetime stats: {trace.trace_summary.windurations}')
 
-			print(f'now reading {tracefile}...\t\t', end="")
-			trace.read_stream()
-			#print(f'Fence count for rank {rank} is: {trace.fence_count}')
-			print('Done.\n')
-		rank += 1
-		opdata_per_rank.append(trace.opdata_per_window)
-		total_exec_time_per_rank.append(trace.total_exec_time)
-		all_window_sizes_per_rank.append(trace.all_window_sizes)
-		all_window_durations_per_rank.append(trace.all_window_durations)
-		epochs_per_window_per_rank.append(trace.epochcount_per_window)
+			exec_summary += trace.trace_summary
 
-		##
-		# temp = np.array(trace.opdata_per_window, dtype=object) 
-		# flatarray = np.concatenate(temp).ravel()
-		# print(flatarray)
-		# #binarray = np.array(flatarray, dtype='i4')
-		# print(f'Size of opdata for rank: {asizeof.asizeof(trace.opdata_per_window)}')
-		# print(f'Size of flattened list: {asizeof.asizeof(flatarray)}')
-		# print(f'Size of flattened list data: {asizeof.asizeof(flatarray.data)}')
-		#print(f'Size of binary list: {asizeof.asizeof(binarray)}')
-		#np.savez("flatarraytest"+str(rank), flatarray)
-		#flatarray.astype('i4').tofile("flatarraytest"+str(rank))
-		##
+	exec_summary.set_averages()
 
-		callcount_per_opcode = [sum(i) for i in zip(callcount_per_opcode, trace.callcount_per_opcode)]
+	return exec_summary
 
-		#print(f'current trace produced by a run of source code : {(c_char * trace.source_file).from_address(0)}')
-
-		#print("{0}".format(trace.source_file.argv[0]), end="\n")
-
-		#sourcefile = trace.source_file
-		#print(f'current trace produced by a run of source code : {sourcefile}')
-
-
-		# with open(tracefile+".avro", 'rb') as file_object: 
-		# 	csv_file = csv.writer(open(tracefile+".rc.csv", "w+")) 
-		# 	head = True 
-		# 	for emp in reader(file_object): 
-		# 		if head: # write
-		# 			header = emp.keys() 
-		# 			csv_file.writerow(header) 
-		# 			head = False # write normal row 
-		# 		csv_file.writerow(emp.values())
-
-
-	return rank, trace.win_count, callcount_per_opcode, opdata_per_rank, total_exec_time_per_rank, all_window_sizes_per_rank, all_window_durations_per_rank, epochs_per_window_per_rank
-
-
-
-def forma_calculate_dt_bounds_estimate(ranks, wins, opdata_per_rank):
-
-	print('Calculating data transfer bounds in execution...\t\t', end="")
-
-	#print(opdata_per_rank)
-
-	for i in range(ranks): # rank
-		#print(f'rank {i} out of {ranks}')
-		for j in range(wins): # window
-			#print(f'\twindow {j} out of {wins}')
-			for k in range(len(opdata_per_rank[i][j])-1): # epoch
-				#print(f'\t\tepoch {k} out of {len(opdata_per_rank[i][j])-1}')
-				for l in range(len(opdata_per_rank[i][j][k])-1): # operation, except fence
-					opdata_per_rank[i][j][k][l][4] = opdata_per_rank[i][j][k][-1][3] - opdata_per_rank[i][j][k][l][1]
-					#print(f'\t\t\toperation {l} out of {len(opdata_per_rank[i][j][k])}')
-	print('Done.\n')
-	return True
 
 
 

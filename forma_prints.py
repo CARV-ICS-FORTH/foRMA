@@ -31,6 +31,7 @@ import numpy as np
 from pydumpi import DumpiTrace
 
 import forma_trace as ft
+import forma_logging as fl
 
 from tabulate import tabulate
 
@@ -42,13 +43,17 @@ def forma_print_stats_x6(row_labels, row_data):
 #	if len(row_data) != 6 or len(row_labels) != 6:
 #		return False
 
+	np.set_printoptions(suppress=True)
 	try:
+		# fl.forma_print(f'Shapes! row_labels: {np.shape(row_labels)}, row_data: {np.shape(row_data)}')
+		# fl.forma_print(f'len(row_labels): {len(row_labels)}')
+		# fl.forma_print(f'row_labels: {row_labels},\nrow_data: {row_data}')
 		rows = [[row_labels[i]]+row_data[i] for i in range(len(row_labels))]
 	except TypeError:
-		print('ERROR: forma_print_stats_x6: check row_labels and row_data types')
+		fl.forma_error('forma_print_stats_x6: check row_labels and row_data types')
 		sys.exit(2)
 
-	print(f'{tabulate(rows, headers=["aggregate", "min", "max", "avg", "mean", "std dev"])}\n')
+	print(f'{tabulate(rows, headers=["aggregate", "min", "max", "avg", "median", "std dev"])}\n')
 	
 	return True
 	
@@ -58,7 +63,7 @@ def forma_print_stats_x4(row_labels, row_data):
 	try:
 		rows = [[row_labels[i]]+row_data[i] for i in range(len(row_labels))]
 	except TypeError:
-		print('ERROR: forma_print_stats_x6: check row_labels and row_data types')
+		fl.forma_print('forma_print_stats_x6: check row_labels and row_data types')
 		sys.exit(2)
 
 	print(f'{tabulate(rows, headers=["aggregate", "min", "max", "avg"])}\n')

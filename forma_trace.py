@@ -1,5 +1,12 @@
 #!/usr/bin/python3
 
+
+__all__ = ["forma"]
+__author__ = "Lena Kanellou"
+__version__ = "0.1.1"
+
+
+
 import getopt 
 import sys 
 import glob, os
@@ -8,197 +15,149 @@ import fnmatch
 
 import ctypes
 
-import csv
-import pickle
-import pyarrow as pa
-import pyarrow.parquet as pq
-
-import avro.schema
-from avro.datafile import DataFileReader, DataFileWriter
-from avro.io import DatumReader, DatumWriter
-
-from fastavro import reader
+# import avro.schema
+# from avro.datafile import DataFileReader, DataFileWriter
+# from avro.io import DatumReader, DatumWriter
+# from fastavro import reader
 
 import logging
 
 from pydumpi import dtypes
 from pydumpi import DumpiTrace
 
+import forma_classes as fc
+import forma_logging as fl
+import forma_stats as fs
+from forma_constants import *
+
 
 ## foRMA in-memory (IM) trace, one of the versions of the callback 
 ## implementations where all opdata are kept in dedicated vectors and 
 ## statistics are calculated a posteriori
 
-class FormaIMTrace(DumpiTrace):
+class FormaSTrace(DumpiTrace):
 
 	def __init__(self, file_name): #, csv_filename, pickle_filename, parquet_filename):
 		super().__init__(file_name)
-		self.fence_count = 0
-		self.win_count = 0
-
-		self.source_file = ctypes.create_string_buffer(64)
 		
-		## DataVolumes per epoch per detected window for current trace. 
-		## indexed by window ID (cf. window lookaside translation buffer wintb)
-		#self.dv_perEpoch_perWindow = dict()
+		self.trace_summary = fc.formaSummary()
+		#self.trace_summary.setRanks(1)
+
+		## Window metrics are indexed by window ID but something strange is going on with 
+		## sst dumpi window id numbers, so I'm using a window id lookaside translation buffer
+		self.win_count = 0
 		self.wintb = dict()
 
+		## based on the above, the following are indexed by win_id, which is the value of 
+		## wintb when the key is data.win
 		self.epochcount_per_window = []
-		self.opdata_per_window = []
+		self.data_xfer_per_window = []
+		self.lifetime_of_window = []
 
-		self.total_exec_time = 0
-		self.all_window_sizes = []
-
-		self.all_window_durations = []
-
-		## will use the convention: 0 - MPI_Get, 1 - MPI_Put, 2 - MPI_Acc, 3 - MPI_Win_fence
-		## will add the following: 4 - MPI_Win_create, 5 - MPI_Win_free, 6 - MPI_Init, 7 - MPI_Finalize
-		self.callcount_per_opcode = [0, 0, 0, 0, 0, 0, 0, 0]
-
-		self.myProfile = ctypes.POINTER(dtypes.DumpiProfile)
-
-		# self.myCsv = open(csv_filename, 'w')
-		# self.writer = csv.writer(self.myCsv)
-
-		# self.myPickle = open(pickle_filename, 'wb')
-
-		# table = pa.Table.from_arrays([[0, 0, 0, 0, 0]], names=["col1"])
-
-		# self.PqFilename = parquet_filename
-
-		# self.pqwriter = pq.ParquetWriter(self.PqFilename, table.schema)
-
-		# schema = avro.schema.parse(open("opdata.avsc", "rb").read())
-
-		# self.avroWriter = DataFileWriter(open(file_name+".avro", "wb"), DatumWriter(), schema)
-		
 
 	def on_init(self, data, thread, cpu_time, wall_time, perf_info):
 		#time_diff = wall_time.stop - wall_time.start
+		
+		#self.total_exec_time = cpu_time.start.to_ns()
+		#self.total_exec_time = wall_time.start.to_ns()
+
+		#self.callcount_per_opcode[6] = self.callcount_per_opcode[6] + 1
+
 		## capture start time of init and end time of finalize in order 
 		## to get the total execution time of the rank for this trace
-		#self.total_exec_time = cpu_time.start.to_ns()
-		self.total_exec_time = wall_time.start.to_ns()
+		self.trace_summary.exectime[0] = wall_time.start.to_ns()
+		self.trace_summary.ranks += 1 
 
-		self.callcount_per_opcode[6] = self.callcount_per_opcode[6] + 1
-
-		"""
-
-		self.source_file = ctypes.create_string_buffer(data.argv[0].contents.value, 64)
-		print(repr(data.argv[0].contents.value))
-
-		"""
-
-		#self.source_file =pathinfo(data.argv[0].contents.value, 64)
-
-		#print(repr(data.argv[0].contents.value))
-
-		#print(data.argv[0].contents.value) #.contents.contents.value 
-
-
-		#self.wallOffset = (self._profile).cpu_time_offset
-		# print(f'\nDUMPI TRACE READING HEADER: {self.read_header().starttime}')
-
-		# self.myProfile = self._profile
-		# print(f'DUMPI TRACE WALL OFFSET: {self.myProfile.contents.wall_time_offset}')
 
 	def on_finalize(self, data, thread, cpu_time, wall_time, perf_info):
-		#time_diff = wall_time.stop - wall_time.start
+		time_diff = wall_time.stop - wall_time.start
+
+		#self.total_exec_time = cpu_time.stop.to_ns()- self.total_exec_time
+	#	self.total_exec_time = wall_time.stop.to_ns()- self.total_exec_time
+		#self.trace_summary.setExectime(self.total_exec_time)
+
 		## capture start time of init and end time of finalize in order 
 		## to get the total execution time of the rank for this trace
-		#self.total_exec_time = cpu_time.stop.to_ns()- self.total_exec_time
-		self.total_exec_time = wall_time.stop.to_ns()- self.total_exec_time
+		total_exec_time = wall_time.stop.to_ns() - self.trace_summary.exectime[0]
+		self.trace_summary.exectime.fill(total_exec_time)
 
-		self.callcount_per_opcode[7] = self.callcount_per_opcode[7] + 1
+		## Window metrics have not been calculated as streaming, so produce them here statically:
 
-		#self.myCsv.close()
-		#self.myPickle.close()
-		#self.pqwriter.close()
-		#self.avroWriter.close()
+		#self.trace_summary.xfer_per_opcode	= np.zeros((5, 4), dtype=float)	# 4 statistics for transfer sizes, tracking 5 opcodes
+		# self.trace_summary.epochs = fs.forma_static_stats_x4(self.epochcount_per_window)
+		# self.trace_summary.windurations	= fs.forma_static_stats_x4(self.lifetime_of_window)
+		fs.forma_static_stats_x4(self.epochcount_per_window, self.trace_summary.epochs)
+		fs.forma_static_stats_x4(self.lifetime_of_window, self.trace_summary.windurations)
+		fs.forma_static_stats_x4(self.data_xfer_per_window, self.trace_summary.xfer_per_win)
 
+		## Wrap up pending metrics from the streaming stats:
+
+		for opcode in (GET, PUT, ACC): # time spent in remote memory ops is spent in put, get, acc
+			self.trace_summary.rmatime[0] += self.trace_summary.opdurations[opcode][AGR] # sum all aggregates together to get total rma time
+			if self.trace_summary.callcount_per_opcode[opcode] != 0:
+				self.trace_summary.xfer_per_opcode[opcode][AVG] = self.trace_summary.xfer_per_opcode[opcode][AGR] / self.trace_summary.callcount_per_opcode[opcode]
+		self.trace_summary.rmatime.fill(self.trace_summary.rmatime[0])
+ 
+		## rma op callbacks have produced the aggregate duration and call-count, 
+		## which both can be used for calculation of average opduration per opcode
+		for opcode in (GET, PUT, ACC, FENCE, WIN_CR):
+			if self.trace_summary.callcount_per_opcode[opcode] != 0:
+				self.trace_summary.opdurations[opcode][AVG] = self.trace_summary.opdurations[opcode][AGR] / self.trace_summary.callcount_per_opcode[opcode]
 
 
 	def on_win_fence(self, data, thread, cpu_time, wall_time, perf_info):
 		wall_duration = (wall_time.stop - wall_time.start).to_ns()
 		#cpu_duration = (cpu_time.stop - cpu_time.start).to_ns()
-		# count mpi_win_fence occurrences
-		self.fence_count += 1
-
-		self.callcount_per_opcode[3] = self.callcount_per_opcode[3] + 1
 
 
 		## identify window key to use on windows dictionary by looking into wintb
-		#win_id = self.wintb[data.win]
 		try:
 			win_id = self.wintb[data.win]
 		except KeyError:
-			print(f'Key {data.win} not in wintb!')
+			fl.forma_logger.warning(f'Key {data.win} not in wintb!')
 			sys.exit(1)
 
-		""" for vectors that refer to RMA ops, we use the following 
-		convention for indexing: 0 - MPI_Get, 1 - MPI_Put, 2 - MPI_Acc
-		and if present, then 3 - MPI_Win_fence
-		"""
-		#opdata = [3, wall_time.start.to_ns(), cpu_duration, cpu_time.stop.to_ns()]
-		opdata = [3, wall_time.start.to_ns(), wall_duration, wall_time.stop.to_ns()]
-		
+		## TODO!!!
+		## this if is here for backwards compatibility with the IM version
+		## should be removed for precise profiling
+		if (self.epochcount_per_window[win_id] > -1):
+			self.trace_summary.callcount_per_opcode[FENCE] += 1
+			fs.forma_streaming_stats_x3(self.trace_summary.opdurations[FENCE], wall_duration)
 
-		## log opdata into corresponding list entry in self.opdata_per_window
-		self.opdata_per_window[win_id].append([])
-		win_epoch = self.epochcount_per_window[win_id]
-		if (win_epoch>-1): 
-			self.opdata_per_window[win_id][win_epoch].append(opdata)
-
-		## increase epoch count on corresponding window
-		## first fence ever on 
 		self.epochcount_per_window[win_id]+=1
-
-		# self.writer.writerow(opdata)
-		# pickle.dump(opdata, self.myPickle)
-		# table = pa.Table.from_arrays([opdata], names=["col1"])
-		# #pq.write_table(table, self.PqFilename, compression=None)
-		# self.pqwriter.write_table(table)
-
-		# self.avroWriter.append({"opcode": 3, "wt_start": wall_time.start.to_ns(), "wt_duration": wall_duration, "numbytes": wall_time.stop.to_ns(), "tg_rank": 0})
-
-
 
 	def on_win_create(self, data, thread, cpu_time, wall_time, perf_info):
 		wall_duration = (wall_time.stop - wall_time.start).to_ns()
 		#cpu_duration = (cpu_time.stop - cpu_time.start).to_ns()
+
 		self.win_count += 1
-
-		self.callcount_per_opcode[4] = self.callcount_per_opcode[4] + 1
-
 		## on create, I update the window ID to index translation buffer
 		## on free, I will free the corresponding entry
 		## DEBUG attempt: I am using a check with -1 in order to detect eventual collisions
 		if self.wintb: ## check first if dict is empty, otherwise nasty seg faults
 			if data.win in (self.wintb).keys(): ## if NOT empty and key already exists... 
 				if (self.wintb[data.win] != -1): ## ... check value, in case on_win_free has not yet been called on it
-					print(f'COLLISION ON WINDOW ID {data.win}')
-					#sys.exit(1)
-			#print('window tb not empty, key does not exist') 
+					fl.forma_logger.warning(f'COLLISION ON WINDOW ID {data.win}')
+					sys.exit(1)
+			#fl.forma_logger.debug('window tb not empty, key does not exist') 
 			## otherwise, not empty, but key does not exist yet
 			self.wintb[data.win] = self.win_count-1
 		else:
 			self.wintb[data.win] = self.win_count-1
-			#print('window tb empty')
+			#fl.forma_logger.debug('window tb empty')
 
 		win_id = self.wintb[data.win]
 
-		## create self.epochcount_per_window list entry for new window, 
-		## so that on_fence can safely increment the epoch count
+		## after determining a safe win id, i use it to initialize the local book-keeping
 		self.epochcount_per_window.append(-1)
+		self.data_xfer_per_window.append(0)
+		self.lifetime_of_window.append(wall_time.start.to_ns())
+		##
 
-		## same for self.opdata_per_window
-		self.opdata_per_window.append([])
-
-		self.all_window_sizes.append(data.size)
-
-		self.all_window_durations.append([wall_duration, wall_time.start.to_ns(), 0])
-
-
+		self.trace_summary.callcount_per_opcode[WIN_CR] += 1
+		self.trace_summary.wins += 1 
+		fs.forma_streaming_stats_x3(self.trace_summary.opdurations[WIN_CR], wall_duration)
+		fs.forma_streaming_stats_x3(self.trace_summary.winsizes, data.size)
 
 	def on_win_free(self, data, thread, cpu_time, wall_time, perf_info):
 		wall_duration = (wall_time.stop - wall_time.start).to_ns()
@@ -210,117 +169,44 @@ class FormaIMTrace(DumpiTrace):
 			print(f'Key {data.win} not in wintb!')
 			sys.exit(1)
 
+		self.lifetime_of_window[win_id] = wall_time.stop.to_ns() - self.lifetime_of_window[win_id]
+
 		self.wintb[data.win] = -1
 
-		self.callcount_per_opcode[5] = self.callcount_per_opcode[5] + 1
-
-		window_start_time = self.all_window_durations[win_id][1]
-
-		window_life_time = (wall_time.stop.to_ns() - window_start_time)
-
-		## each element is of all_window_durations contains info for window with ID data.win and is of the form:
-		## [ MPI_Win_create wall clock duration,  total window life time (wall clock), MPI_Win_free wall clock duration]		
-		self.all_window_durations[win_id] = [self.all_window_durations[win_id][0], window_life_time, wall_duration]
+		self.trace_summary.callcount_per_opcode[WIN_FREE] += 1
 
 
 	def on_get(self, data, thread, cpu_time, wall_time, perf_info):
 		wall_duration = (wall_time.stop - wall_time.start).to_ns()
 		#cpu_duration = (cpu_time.stop - cpu_time.start).to_ns()
-		
-		try:
-			win_id = self.wintb[data.win]
-		except KeyError:
-			print(f'Key {data.win} not in wintb!')
-			sys.exit(1)
 
-		self.callcount_per_opcode[0] = self.callcount_per_opcode[0] + 1
+		self.trace_summary.callcount_per_opcode[GET] += 1
+		fs.forma_streaming_stats_x3(self.trace_summary.opdurations[GET], wall_duration)
+		fs.forma_streaming_stats_x3(self.trace_summary.xfer_per_opcode[GET], data.origincount*self.type_sizes[data.origintype])
 
-
-		""" for vectors that refer to RMA ops, we use the following 
-		convention for indexing: 0 - MPI_Get, 1 - MPI_Put, 2 - MPI_Acc
-		and if present, then 3 - MPI_Win_fence
-		"""
-		# opdata = ['g', wall_time.start.to_ns(), cpu_duration, data.origincount*self.type_sizes[data.origintype], 0]
-		#opdata = [0, cpu_time.start.to_ns(), cpu_duration, data.origincount*self.type_sizes[data.origintype], 0]
-		opdata = [0, wall_time.start.to_ns(), wall_duration, data.origincount*self.type_sizes[data.origintype], data.targetrank]
-
-		win_epoch = self.epochcount_per_window[win_id]
-		self.opdata_per_window[win_id][win_epoch].append(opdata)
-
-		# self.writer.writerow(opdata)
-		# pickle.dump(opdata, self.myPickle)
-		# table = pa.Table.from_arrays([opdata], names=["col1"])
-		# #pq.write_table(table, self.PqFilename, compression=None)
-		# self.pqwriter.write_table(table)
-
-		# self.avroWriter.append({"opcode": 0, "wt_start": wall_time.start.to_ns(), "wt_duration": wall_duration, "numbytes": data.origincount*self.type_sizes[data.origintype], "tg_rank": data.targetrank})
-
-
+		win_id = self.wintb[data.win]
+		self.data_xfer_per_window[win_id] += data.origincount*self.type_sizes[data.origintype]
 
 	def on_put(self, data, thread, cpu_time, wall_time, perf_info):
 		wall_duration = (wall_time.stop - wall_time.start).to_ns()
 		#cpu_duration = (cpu_time.stop - cpu_time.start).to_ns()
 
-		try:
-			win_id = self.wintb[data.win]
-		except KeyError:
-			print(f'Key {data.win} not in wintb!')
-			sys.exit(1)
+		self.trace_summary.callcount_per_opcode[PUT] += 1
+		fs.forma_streaming_stats_x3(self.trace_summary.opdurations[PUT], wall_duration)
+		fs.forma_streaming_stats_x3(self.trace_summary.xfer_per_opcode[PUT], data.origincount*self.type_sizes[data.origintype])
 
-
-		self.callcount_per_opcode[1] = self.callcount_per_opcode[1] + 1
-
-
-		""" for vectors that refer to RMA ops, we use the following 
-		convention for indexing: 0 - MPI_Get, 1 - MPI_Put, 2 - MPI_Acc
-		and if present, then 3 - MPI_Win_fence
-		"""
-		# opdata = ['p', wall_time.start.to_ns(), cpu_duration, data.origincount*self.type_sizes[data.origintype], 0]
-		#opdata = [1, cpu_time.start.to_ns(), cpu_duration, data.origincount*self.type_sizes[data.origintype], 0]
-		opdata = [1, wall_time.start.to_ns(), wall_duration, data.origincount*self.type_sizes[data.origintype], data.targetrank]
-
-		win_epoch = self.epochcount_per_window[win_id]
-		self.opdata_per_window[win_id][win_epoch].append(opdata)
-
-		# self.writer.writerow(opdata)
-		# pickle.dump(opdata, self.myPickle)
-		# table = pa.Table.from_arrays([opdata], names=["col1"])
-		# #pq.write_table(table, self.PqFilename, compression=None)
-		# self.pqwriter.write_table(table)
-
-		# self.avroWriter.append({"opcode": 1, "wt_start": wall_time.start.to_ns(), "wt_duration": wall_duration, "numbytes": data.origincount*self.type_sizes[data.origintype], "tg_rank": data.targetrank})
-
+		win_id = self.wintb[data.win]
+		self.data_xfer_per_window[win_id] += data.origincount*self.type_sizes[data.origintype]
 
 
 	def on_accumulate(self, data, thread, cpu_time, wall_time, perf_info):
 		wall_duration = (wall_time.stop - wall_time.start).to_ns()
 		#cpu_duration = (cpu_time.stop - cpu_time.start).to_ns()
 
-		try:
-			win_id = self.wintb[data.win]
-		except KeyError:
-			print(f'Key {data.win} not in wintb!')
-			sys.exit(1)
+		self.trace_summary.callcount_per_opcode[ACC] += 1
+		fs.forma_streaming_stats_x3(self.trace_summary.opdurations[ACC], wall_duration)
+		fs.forma_streaming_stats_x3(self.trace_summary.xfer_per_opcode[ACC], data.origincount*self.type_sizes[data.origintype])
 
+		win_id = self.wintb[data.win]
+		self.data_xfer_per_window[win_id] += data.origincount*self.type_sizes[data.origintype]
 
-		self.callcount_per_opcode[2] = self.callcount_per_opcode[2] + 1
-
-
-		""" for vectors that refer to RMA ops, we use the following 
-		convention for indexing: 0 - MPI_Get, 1 - MPI_Put, 2 - MPI_Acc
-		and if present, then 3 - MPI_Win_fence
-		"""
-		# opdata = ['a', wall_time.start.to_ns(), cpu_duration, data.origincount*self.type_sizes[data.origintype], 0]
-		#opdata = [2, cpu_time.start.to_ns(), cpu_duration, data.origincount*self.type_sizes[data.origintype], 0]
-		opdata = [2, wall_time.start.to_ns(), wall_duration, data.origincount*self.type_sizes[data.origintype], data.targetrank]
-
-		win_epoch = self.epochcount_per_window[win_id]
-		self.opdata_per_window[win_id][win_epoch].append(opdata)
-
-		# self.writer.writerow(opdata)
-		# pickle.dump(opdata, self.myPickle)
-		# table = pa.Table.from_arrays([opdata], names=["col1"])
-		# #pq.write_table(table, self.PqFilename, compression=None)
-		# self.pqwriter.write_table(table)
-
-		# self.avroWriter.append({"opcode": 2, "wt_start": wall_time.start.to_ns(), "wt_duration": wall_duration, "numbytes": data.origincount*self.type_sizes[data.origintype], "tg_rank": data.targetrank})
