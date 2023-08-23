@@ -41,7 +41,13 @@ import forma_trace as ft
 import forma_aux as fa
 import forma_classes as fc
 import forma_logging as fl
-import forma_constants as fx
+from forma_constants import *
+
+
+import avro.schema
+from avro.datafile import DataFileReader, DataFileWriter
+from avro.io import DatumReader, DatumWriter
+
 
 
 def forma_parse_traces(tracefiles):
@@ -55,7 +61,10 @@ def forma_parse_traces(tracefiles):
 
 	fl.forma_logger.debug('Inside forma parse traces.')
 
-	for tracefile in tracefiles:
+	schema = avro.schema.parse(open("summary.avsc", "rb").read())
+	writer = DataFileWriter(open("rank_summaries.avro", "wb"), DatumWriter(), schema)
+
+	for rank, tracefile in enumerate(tracefiles):
 		with ft.FormaSTrace(tracefile) as trace:
 			fl.forma_print(f'Now parsing {tracefile}.\n')
 
@@ -72,9 +81,36 @@ def forma_parse_traces(tracefiles):
 			# 	f'Epochs/window stats: {trace.trace_summary.epochs}\n' +
 			# 	f'Window lifetime stats: {trace.trace_summary.windurations}')
 
+			writer.append({"rank_nr": rank, 
+				"wins": trace.trace_summary.wins, 
+				"mpi_gets": int(trace.trace_summary.callcount_per_opcode[GET]), 
+				"mpi_puts": int(trace.trace_summary.callcount_per_opcode[PUT]), 
+				"mpi_accs": int(trace.trace_summary.callcount_per_opcode[ACC]), 
+				"mpi_fences" : int(trace.trace_summary.callcount_per_opcode[FENCE]), 
+				"total_exec_times": trace.trace_summary.exectime.tolist(), 
+				"total_rma_times": trace.trace_summary.rmatime.tolist(), 
+				"mpi_get_times": trace.trace_summary.opdurations[GET].tolist(), 
+				"mpi_put_times": trace.trace_summary.opdurations[PUT].tolist(), 
+				"mpi_acc_times": trace.trace_summary.opdurations[ACC].tolist(), 
+				"mpi_fence_times": trace.trace_summary.opdurations[FENCE].tolist(), 
+				"window_sizes": trace.trace_summary.winsizes.tolist(), 
+				"tf_per_win": trace.trace_summary.xfer_per_win.tolist(), 
+				"epochs_per_win": trace.trace_summary.epochs.tolist(), 
+				"win_durations": trace.trace_summary.windurations.tolist(), 
+				"mpi_get_dtb": trace.trace_summary.dtbounds[GET].tolist(), 
+				"mpi_put_dtv": trace.trace_summary.dtbounds[PUT].tolist(), 
+				"mpi_acc_dtb": trace.trace_summary.dtbounds[ACC].tolist() })
+			
 			exec_summary += trace.trace_summary
 
+	writer.close()
 	exec_summary.set_averages()
+
+	reader = DataFileReader(open("rank_summaries.avro", "rb"), DatumReader())
+	for summary in reader:
+		print(summary)
+	reader.close()
+      
 
 	return exec_summary
 

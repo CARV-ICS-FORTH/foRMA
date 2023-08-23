@@ -42,6 +42,7 @@ class FormaSTrace(DumpiTrace):
 		
 		self.trace_summary = fc.formaSummary()
 		#self.trace_summary.setRanks(1)
+		
 
 		## Window metrics are indexed by window ID but something strange is going on with 
 		## sst dumpi window id numbers, so I'm using a window id lookaside translation buffer
