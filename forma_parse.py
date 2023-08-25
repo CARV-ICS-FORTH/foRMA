@@ -98,7 +98,7 @@ def forma_parse_traces(tracefiles):
 				"epochs_per_win": trace.trace_summary.epochs.tolist(), 
 				"win_durations": trace.trace_summary.windurations.tolist(), 
 				"mpi_get_dtb": trace.trace_summary.dtbounds[GET].tolist(), 
-				"mpi_put_dtv": trace.trace_summary.dtbounds[PUT].tolist(), 
+				"mpi_put_dtb": trace.trace_summary.dtbounds[PUT].tolist(), 
 				"mpi_acc_dtb": trace.trace_summary.dtbounds[ACC].tolist() })
 			
 			exec_summary += trace.trace_summary
@@ -106,10 +106,10 @@ def forma_parse_traces(tracefiles):
 	writer.close()
 	exec_summary.set_averages()
 
-	reader = DataFileReader(open("rank_summaries.avro", "rb"), DatumReader())
-	for summary in reader:
-		print(summary)
-	reader.close()
+	# reader = DataFileReader(open("rank_summaries.avro", "rb"), DatumReader())
+	# for summary in reader:
+	# 	print(summary)
+	# reader.close()
       
 
 	return exec_summary

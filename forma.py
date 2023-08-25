@@ -42,6 +42,8 @@ import forma_parse as fp
 import forma_aux as fa
 import forma_classes as fc
 import forma_logging as fl
+from forma_constants import *
+
 
 
 rma_tracked_calls = ['MPI_Win_create', 'MPI_Get', 'MPI_Put', 'MPI_Accumulate', 'MPI_Win_free', 'MPI_Win_fence']
@@ -102,6 +104,19 @@ def main():
 ################ Stage #0 ends here ########################################
 
 	exec_summary = fp.forma_parse_traces(tracefiles)
+
+	total_callbacks = np.sum(exec_summary.callcount_per_opcode)
+	total_rmas = exec_summary.callcount_per_opcode[GET]+exec_summary.callcount_per_opcode[PUT]+exec_summary.callcount_per_opcode[ACC]
+	rma_pc = round((total_rmas/total_callbacks)*100, 2)
+	total_synch = exec_summary.callcount_per_opcode[FENCE]
+	synch_pc = round((total_synch/total_callbacks)*100, 2)
+	total_win = exec_summary.callcount_per_opcode[WIN_CR]+exec_summary.callcount_per_opcode[WIN_FREE]
+	win_pc = round((total_win/total_callbacks)*100, 2)
+
+	fl.forma_print(f'Handled {total_callbacks} callbacks during the parsing of {exec_summary.ranks} trace files.\n' +
+		f'\t    Out of those, {total_rmas} (i.e. {rma_pc}% of callbacks) refer to remote memory accesses.\n' +
+		f'\t    Out of those, {total_synch} (i.e. {synch_pc}% of callbacks) refer to fence synchronization.\n'+
+		f'\t    Out of those, {total_win} (i.e. {win_pc}% of callbacks) refer to window creation/destruction.\n')
 
 	exec_summary.print_summary()
 

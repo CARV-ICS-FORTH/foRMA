@@ -19,7 +19,7 @@
  	{"name": "epochs_per_win", "type": {"type": "array", "items": "float"}},
  	{"name": "win_durations", "type": {"type": "array", "items": "float"}},
  	{"name": "mpi_get_dtb", "type": {"type": "array", "items": "float"}},
- 	{"name": "mpi_put_dtv", "type": {"type": "array", "items": "float"}},
+ 	{"name": "mpi_put_dtb", "type": {"type": "array", "items": "float"}},
  	{"name": "mpi_acc_dtb", "type": {"type": "array", "items": "float"}}
  ]
 }
