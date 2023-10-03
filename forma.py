@@ -45,6 +45,9 @@ import forma_logging as fl
 from forma_constants import *
 
 
+import avro.schema
+from avro.datafile import DataFileReader, DataFileWriter
+from avro.io import DatumReader, DatumWriter
 
 rma_tracked_calls = ['MPI_Win_create', 'MPI_Get', 'MPI_Put', 'MPI_Accumulate', 'MPI_Win_free', 'MPI_Win_fence']
 #logger = fa.setup_forma_logger(logging.DEBUG)
@@ -132,9 +135,10 @@ def main():
 				'------------------------------------------------------------------------------------------\n' + 
 				'\te: Statistics per epoch (fence-based synchronization)\n' + 
 				'\tf: Fence statistics\n' + 
-				'\tc: Time spent in calls (per rank)\n' + 
+				'\tc: Per rank summaries to file (time spent in calls, data transfer bounds per rank)\n' + 
+				'\tr: Print summary for specific rank\n' + 
 				'\ta: Full analysis (i.e. all of the above)\n' + 
-				'\tr: Reprint options\n' + 
+				'\tp: Reprint options\n' + 
 				'\tq: Quit\n')
 			action = input('Please select action: ')
 
@@ -149,10 +153,32 @@ def main():
 		elif action == 'c':
 			print('Preparing results...')
 			print('Time spent in calls (per rank), as well as data transfer bounds, can be found in file calls.txt\n')
+		elif action == 'r':
+			try:
+				rank_id = int(input(f'Please select rank ID [0 - {exec_summary.ranks-1}]: '))
+				# if rank_input.isnumeric():
+				#     rank_id = int(rank_input)
+			except ValueError:
+				#if isinstance(rank_input, (str)):
+				print('Invalid rank ID!')
+				continue
+			if rank_id not in range(0, exec_summary.ranks):
+			    print('Invalid rank ID!')
+			    continue
+			print(f'Summary for rank {rank_id}\n')
+			rank_summary = fc.formaSummary()
+			schema = avro.schema.parse(open("summary.avsc", "rb").read())
+			reader = DataFileReader(open("rank_summaries.avro", "rb"), DatumReader(schema))
+			for rid, summary in enumerate(reader):
+				if rid == rank_id:
+					rank_summary.set_from_dict(summary)
+					#print(summary)
+					rank_summary.print_summary()
+			reader.close()
 		elif action == 'a':
 			print('Preparing results...')
 			print('Full analysis broken down per ranks and per windows can be found in files epochs.txt, fences.txt, and calls.txt\n')
-		elif action == 'r':
+		elif action == 'p':
 			pass
 		else:
 			print('Invalid action option!')

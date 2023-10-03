@@ -59,6 +59,30 @@ class formaSummary:
 		self.windurations	= np.zeros(4, dtype=float)	# 4 statistics for window lifetime durations
 
 
+	def set_from_dict(self, dict):
+
+		self.initialized	= 0
+		self.wins 			= dict['wins']
+		self.ranks 			= dict['rank_nr']
+		self.exectime		= dict['total_exec_times']
+		self.rmatime		= dict['total_rma_times']
+		self.callcount_per_opcode[GET]	= dict['mpi_gets']
+		self.callcount_per_opcode[PUT]	= dict['mpi_puts']
+		self.callcount_per_opcode[ACC]	= dict['mpi_accs']
+		self.callcount_per_opcode[FENCE]	= dict['mpi_fences']
+		self.xfer_per_opcode	= np.zeros((3, 4), dtype=float)	# 4 statistics for transfer sizes, tracking 5 opcodes
+		self.opdurations[GET]	= dict['mpi_get_times']
+		self.opdurations[PUT]	= dict['mpi_put_times']
+		self.opdurations[ACC]	= dict['mpi_acc_times']
+		self.opdurations[FENCE]	= dict['mpi_fence_times']
+		self.dtbounds[GET]	= dict['mpi_get_dtb']
+		self.dtbounds[PUT]	= dict['mpi_put_dtb']
+		self.dtbounds[ACC]	= dict['mpi_acc_dtb']
+		self.winsizes		= dict['window_sizes']
+		self.xfer_per_win	= dict['tf_per_win']
+		self.epochs			= dict['epochs_per_win']
+		self.windurations	= dict['win_durations']
+
 	def __iadd__(self, other):
 
 		if not self.initialized: 

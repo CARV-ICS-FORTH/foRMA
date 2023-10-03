@@ -210,4 +210,3 @@ class FormaSTrace(DumpiTrace):
 
 		win_id = self.wintb[data.win]
 		self.data_xfer_per_window[win_id] += data.origincount*self.type_sizes[data.origintype]
-
