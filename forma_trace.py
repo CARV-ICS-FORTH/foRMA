@@ -55,6 +55,9 @@ class FormaSTrace(DumpiTrace):
 		self.data_xfer_per_window = []
 		self.lifetime_of_window = []
 
+		if not os.path.exists('./forma_meta/'):
+			os.mkdir('./forma_meta/')
+
 
 	def on_init(self, data, thread, cpu_time, wall_time, perf_info):
 		#time_diff = wall_time.stop - wall_time.start

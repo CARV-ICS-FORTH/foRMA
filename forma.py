@@ -152,6 +152,17 @@ def main():
 			print('Fence statistics can be found in file fences.txt.\n')
 		elif action == 'c':
 			print('Preparing results...')
+			rank_summary = fc.formaSummary()
+			schema = avro.schema.parse(open("schemas/summary.avsc", "rb").read())
+			reader = DataFileReader(open("rank_summaries.avro", "rb"), DatumReader(schema))
+			original_stdout = sys.stdout # Save a reference to the original standard output
+			with open('calls.txt', 'w') as f:
+				sys.stdout = f # Change the standard output to the file we created.
+				for rid, summary in enumerate(reader):
+					rank_summary.set_from_dict(summary)
+					rank_summary.print_summary()
+				reader.close()
+			sys.stdout = original_stdout # Reset the standard output to its original value
 			print('Time spent in calls (per rank), as well as data transfer bounds, can be found in file calls.txt\n')
 		elif action == 'r':
 			try:
@@ -167,7 +178,7 @@ def main():
 			    continue
 			print(f'Summary for rank {rank_id}\n')
 			rank_summary = fc.formaSummary()
-			schema = avro.schema.parse(open("summary.avsc", "rb").read())
+			schema = avro.schema.parse(open("schemas/summary.avsc", "rb").read())
 			reader = DataFileReader(open("rank_summaries.avro", "rb"), DatumReader(schema))
 			for rid, summary in enumerate(reader):
 				if rid == rank_id:
@@ -177,6 +188,25 @@ def main():
 			reader.close()
 		elif action == 'a':
 			print('Preparing results...')
+			original_stdout = sys.stdout # Save a reference to the original standard output
+
+			rank_summary = fc.formaSummary()
+			schema = avro.schema.parse(open("schemas/summary.avsc", "rb").read())
+			reader = DataFileReader(open("rank_summaries.avro", "rb"), DatumReader(schema))
+			with open('calls.txt', 'w') as f:
+				sys.stdout = f # Change the standard output to the file we created.
+				for rid, summary in enumerate(reader):
+					rank_summary.set_from_dict(summary)
+					rank_summary.print_summary()
+				reader.close()
+
+			with open('epochs.txt', 'w') as f:
+				sys.stdout = f # Change the standard output to the file we created.
+
+			with open('fences.txt', 'w') as f:
+				sys.stdout = f # Change the standard output to the file we created.
+				
+			sys.stdout = original_stdout # Reset the standard output to its original value
 			print('Full analysis broken down per ranks and per windows can be found in files epochs.txt, fences.txt, and calls.txt\n')
 		elif action == 'p':
 			pass

@@ -61,7 +61,7 @@ def forma_parse_traces(tracefiles):
 
 	fl.forma_logger.debug('Inside forma parse traces.')
 
-	schema = avro.schema.parse(open("summary.avsc", "rb").read())
+	schema = avro.schema.parse(open("schemas/summary.avsc", "rb").read())
 	writer = DataFileWriter(open("rank_summaries.avro", "wb"), DatumWriter(), schema)
 
 	for rank, tracefile in enumerate(tracefiles):
