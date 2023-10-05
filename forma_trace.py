@@ -55,8 +55,13 @@ class FormaSTrace(DumpiTrace):
 		self.data_xfer_per_window = []
 		self.lifetime_of_window = []
 
+		## similarly but not exactly the same, we use win_id as key to the following dictionary
+		## in order to access epoch statistics for the currently active epoch for this window
+		self.epoch_stats_for_win = {}
+
 		if not os.path.exists('./forma_meta/'):
 			os.mkdir('./forma_meta/')
+
 
 
 	def on_init(self, data, thread, cpu_time, wall_time, perf_info):
@@ -130,6 +135,13 @@ class FormaSTrace(DumpiTrace):
 
 		self.epochcount_per_window[win_id]+=1
 
+		print(self.epoch_stats_for_win[win_id].win_id)
+		self.epoch_stats_for_win[win_id].win_id = win_id+1
+		print(self.epoch_stats_for_win[win_id].win_id)
+		self.epoch_stats_for_win[win_id].reset()
+		print(self.epoch_stats_for_win[win_id].win_id)
+		
+
 	def on_win_create(self, data, thread, cpu_time, wall_time, perf_info):
 		wall_duration = (wall_time.stop - wall_time.start).to_ns()
 		#cpu_duration = (cpu_time.stop - cpu_time.start).to_ns()
@@ -158,6 +170,8 @@ class FormaSTrace(DumpiTrace):
 		self.lifetime_of_window.append(wall_time.start.to_ns())
 		##
 
+		self.epoch_stats_for_win[win_id] = fc.epochSummary()
+
 		self.trace_summary.callcount_per_opcode[WIN_CR] += 1
 		self.trace_summary.wins += 1 
 		fs.forma_streaming_stats_x3(self.trace_summary.opdurations[WIN_CR], wall_duration)
@@ -174,6 +188,8 @@ class FormaSTrace(DumpiTrace):
 			sys.exit(1)
 
 		self.lifetime_of_window[win_id] = wall_time.stop.to_ns() - self.lifetime_of_window[win_id]
+
+		del self.epoch_stats_for_win[win_id]
 
 		self.wintb[data.win] = -1
 

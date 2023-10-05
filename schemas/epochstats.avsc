@@ -3,6 +3,7 @@
  "name": "epoch_summary",
  "fields": [
  	{"name": "win_id", "type": "int"},
+ 	{"name": "epoch_nr", "type": "int"},
  	{"name": "mpi_gets", "type": "int"},
  	{"name": "mpi_puts", "type": "int"},
  	{"name": "mpi_accs", "type": "int"},

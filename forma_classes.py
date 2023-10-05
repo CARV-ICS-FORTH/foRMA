@@ -186,3 +186,31 @@ class formaSummary:
 		fp.forma_print_stats_x4(["MPI_Get", "MPI_Put", "MPI_Accumulate"], dtbounds_stats)
 		
 		return True
+
+
+
+
+class epochSummary:
+
+	def __init__(self):
+
+		self.initialized	= 0
+		self.win_id			= 0
+		self.epoch_nr		= 0
+		self.callcount_per_opcode	= np.zeros(3, dtype=int) 	# tracking 3 opcodes
+		self.opdurations	= np.zeros((3, 4), dtype=float)	# tracking 3 opcodes, 4 statistics for each
+		self.xfer_per_opcode	= np.zeros((3, 4), dtype=float)	# 4 statistics for transfer sizes, tracking 3 opcodes
+		self.dtbounds		= np.zeros((3, 6), dtype=float)	#  -"-
+		self.winsizes		= np.zeros(4, dtype=float)	# 4 statistics for window sizes
+		self.xfer_per_win	= np.zeros(4, dtype=float)	# 4 statistics for total bytes transferred 
+
+	def reset(self):
+		self.initialized	= 0
+		self.win_id			= 0
+		self.epoch_nr		= 0
+		self.callcount_per_opcode	= np.zeros(3, dtype=int) 	# tracking 3 opcodes
+		self.opdurations	= np.zeros((3, 4), dtype=float)	# tracking 3 opcodes, 4 statistics for each
+		self.xfer_per_opcode	= np.zeros((3, 4), dtype=float)	# 4 statistics for transfer sizes, tracking 3 opcodes
+		self.dtbounds		= np.zeros((3, 6), dtype=float)	#  -"-
+		self.winsizes		= np.zeros(4, dtype=float)	# 4 statistics for window sizes
+		self.xfer_per_win	= np.zeros(4, dtype=float)	# 4 statistics for total bytes transferred 
