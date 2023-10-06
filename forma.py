@@ -146,6 +146,19 @@ def main():
 			sys.exit()
 		elif action == 'e': #
 			print('Preparing results...')
+			with open('epochs.txt', 'w') as f:
+				epoch_summary = fc.epochSummary()
+				schema = avro.schema.parse(open("schemas/summary.avsc", "rb").read())
+				for rank_id in range(0, exec_summary.ranks):
+					epochsumfile = "./forma_meta/epochs-"+str(rank_id)+".avro"
+					reader = DataFileReader(open(epochsumfile, "rb"), DatumReader(schema))
+					for rid, summary in enumerate(reader):
+						epoch_summary.set_from_dict(summary)
+						#epoch_summary.print_summary()
+						print(summary)
+					reader.close()
+
+
 			print('Statistics per epoch (fence-based synchronization) can be found in file epochs.txt\n')
 		elif action == 'f':
 			print('Preparing results...')
@@ -202,6 +215,18 @@ def main():
 
 			with open('epochs.txt', 'w') as f:
 				sys.stdout = f # Change the standard output to the file we created.
+
+				epoch_summary = fc.epochSummary()
+				schema = avro.schema.parse(open("schemas/summary.avsc", "rb").read())
+				for rank_id in range(0, exec_summary.ranks):
+					epochsumfile = "./forma_meta/epochs-"+str(rank)+".avro"
+					reader = DataFileReader(open(epochsumfile, "rb"), DatumReader(schema))
+					for rid, summary in enumerate(reader):
+						epoch_summary.set_from_dict(summary)
+						epoch_summary.print_summary()
+					reader.close()
+
+
 
 			with open('fences.txt', 'w') as f:
 				sys.stdout = f # Change the standard output to the file we created.

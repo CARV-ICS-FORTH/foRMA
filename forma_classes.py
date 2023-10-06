@@ -199,10 +199,8 @@ class epochSummary:
 		self.epoch_nr		= 0
 		self.callcount_per_opcode	= np.zeros(3, dtype=int) 	# tracking 3 opcodes
 		self.opdurations	= np.zeros((3, 4), dtype=float)	# tracking 3 opcodes, 4 statistics for each
-		self.xfer_per_opcode	= np.zeros((3, 4), dtype=float)	# 4 statistics for transfer sizes, tracking 3 opcodes
+		self.xfer_per_opcode	= np.zeros(3, dtype=float)	# 4 statistics for transfer sizes, tracking 3 opcodes
 		self.dtbounds		= np.zeros((3, 6), dtype=float)	#  -"-
-		self.winsizes		= np.zeros(4, dtype=float)	# 4 statistics for window sizes
-		self.xfer_per_win	= np.zeros(4, dtype=float)	# 4 statistics for total bytes transferred 
 
 	def reset(self):
 		self.initialized	= 0
@@ -210,7 +208,19 @@ class epochSummary:
 		self.epoch_nr		= 0
 		self.callcount_per_opcode	= np.zeros(3, dtype=int) 	# tracking 3 opcodes
 		self.opdurations	= np.zeros((3, 4), dtype=float)	# tracking 3 opcodes, 4 statistics for each
-		self.xfer_per_opcode	= np.zeros((3, 4), dtype=float)	# 4 statistics for transfer sizes, tracking 3 opcodes
+		self.xfer_per_opcode	= np.zeros(3, dtype=float)	# 4 statistics for transfer sizes, tracking 3 opcodes
 		self.dtbounds		= np.zeros((3, 6), dtype=float)	#  -"-
-		self.winsizes		= np.zeros(4, dtype=float)	# 4 statistics for window sizes
-		self.xfer_per_win	= np.zeros(4, dtype=float)	# 4 statistics for total bytes transferred 
+
+	def set_from_dict(self, dict):
+		self.win_id			= dict["win_id"]
+		self.epoch_nr		= dict["epoch_nr"]
+		self.callcount_per_opcode[GET]	= dict["mpi_gets"]
+		self.callcount_per_opcode[PUT]	= dict["mpi_puts"]
+		self.callcount_per_opcode[ACC]	= dict["mpi_accs"]
+		self.opdurations[GET]	= dict["mpi_get_times"]
+		self.opdurations[PUT]	= dict["mpi_put_times"]
+		self.opdurations[ACC]	= dict["mpi_acc_times"]
+		self.xfer_per_opcode	= dict["tf_per_op"]
+		self.dtbounds[GET]		= dict["mpi_get_dtb"]
+		self.dtbounds[PUT]		= dict["mpi_put_dtb"]
+		self.dtbounds[ACC]		= dict["mpi_acc_dtb"]

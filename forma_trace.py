@@ -28,7 +28,12 @@ from pydumpi import DumpiTrace
 import forma_classes as fc
 import forma_logging as fl
 import forma_stats as fs
+import forma_prints as fo
 from forma_constants import *
+
+import avro.schema
+from avro.datafile import DataFileReader, DataFileWriter
+from avro.io import DatumReader, DatumWriter
 
 
 ## foRMA in-memory (IM) trace, one of the versions of the callback 
@@ -37,7 +42,7 @@ from forma_constants import *
 
 class FormaSTrace(DumpiTrace):
 
-	def __init__(self, file_name): #, csv_filename, pickle_filename, parquet_filename):
+	def __init__(self, file_name, rank): #, csv_filename, pickle_filename, parquet_filename):
 		super().__init__(file_name)
 		
 		self.trace_summary = fc.formaSummary()
@@ -61,6 +66,10 @@ class FormaSTrace(DumpiTrace):
 
 		if not os.path.exists('./forma_meta/'):
 			os.mkdir('./forma_meta/')
+
+		schema = avro.schema.parse(open("schemas/epochstats.avsc", "rb").read())
+		epochfilename = "./forma_meta/epochs-"+str(rank)+".avro"
+		self.writer = DataFileWriter(open(epochfilename, "wb"), DatumWriter(), schema)
 
 
 
@@ -114,6 +123,9 @@ class FormaSTrace(DumpiTrace):
 				self.trace_summary.opdurations[opcode][AVG] = self.trace_summary.opdurations[opcode][AGR] / self.trace_summary.callcount_per_opcode[opcode]
 
 
+		self.writer.close()
+
+
 	def on_win_fence(self, data, thread, cpu_time, wall_time, perf_info):
 		wall_duration = (wall_time.stop - wall_time.start).to_ns()
 		#cpu_duration = (cpu_time.stop - cpu_time.start).to_ns()
@@ -135,11 +147,35 @@ class FormaSTrace(DumpiTrace):
 
 		self.epochcount_per_window[win_id]+=1
 
-		print(self.epoch_stats_for_win[win_id].win_id)
-		self.epoch_stats_for_win[win_id].win_id = win_id+1
-		print(self.epoch_stats_for_win[win_id].win_id)
+		self.epoch_stats_for_win[win_id].win_id = win_id
+		print(f'Window is {self.epoch_stats_for_win[win_id].win_id}, epoch is {self.epochcount_per_window[win_id]}')
+
+		
+		epoch_stats = []
+		for opcode in range(3):
+			div = self.epoch_stats_for_win[win_id].callcount_per_opcode[opcode]
+			if div != 0:
+				self.epoch_stats_for_win[win_id].opdurations[opcode][AVG] = self.epoch_stats_for_win[win_id].opdurations[opcode][AGR] / self.epoch_stats_for_win[win_id].callcount_per_opcode[opcode]
+			epoch_stats.append((self.epoch_stats_for_win[win_id].opdurations[opcode]).tolist())
+		
+		fo.forma_print_stats_x4(["MPI_Get", "MPI_Put", "MPI_Accumulate"], epoch_stats)
+
+		self.writer.append({"win_id": self.epoch_stats_for_win[win_id].win_id, 
+				"epoch_nr": self.epochcount_per_window[win_id], 
+				"mpi_gets": int(self.epoch_stats_for_win[win_id].callcount_per_opcode[GET]), 
+				"mpi_puts": int(self.epoch_stats_for_win[win_id].callcount_per_opcode[PUT]), 
+				"mpi_accs": int(self.epoch_stats_for_win[win_id].callcount_per_opcode[ACC]), 
+				"mpi_get_times": self.epoch_stats_for_win[win_id].opdurations[GET].tolist(), 
+				"mpi_put_times": self.epoch_stats_for_win[win_id].opdurations[PUT].tolist(), 
+				"mpi_acc_times": self.epoch_stats_for_win[win_id].opdurations[ACC].tolist(), 
+				"tf_per_op": self.epoch_stats_for_win[win_id].xfer_per_opcode.tolist(), 
+				"mpi_get_dtb": self.epoch_stats_for_win[win_id].dtbounds[GET].tolist(), 
+				"mpi_put_dtb": self.epoch_stats_for_win[win_id].dtbounds[PUT].tolist(), 
+				"mpi_acc_dtb": self.epoch_stats_for_win[win_id].dtbounds[ACC].tolist()})
+
 		self.epoch_stats_for_win[win_id].reset()
-		print(self.epoch_stats_for_win[win_id].win_id)
+
+
 		
 
 	def on_win_create(self, data, thread, cpu_time, wall_time, perf_info):
@@ -207,6 +243,9 @@ class FormaSTrace(DumpiTrace):
 		win_id = self.wintb[data.win]
 		self.data_xfer_per_window[win_id] += data.origincount*self.type_sizes[data.origintype]
 
+		self.epoch_stats_for_win[win_id].callcount_per_opcode[GET] += 1
+		fs.forma_streaming_stats_x3(self.epoch_stats_for_win[win_id].opdurations[GET], wall_duration)
+
 	def on_put(self, data, thread, cpu_time, wall_time, perf_info):
 		wall_duration = (wall_time.stop - wall_time.start).to_ns()
 		#cpu_duration = (cpu_time.stop - cpu_time.start).to_ns()
@@ -218,6 +257,8 @@ class FormaSTrace(DumpiTrace):
 		win_id = self.wintb[data.win]
 		self.data_xfer_per_window[win_id] += data.origincount*self.type_sizes[data.origintype]
 
+		self.epoch_stats_for_win[win_id].callcount_per_opcode[PUT] += 1
+		fs.forma_streaming_stats_x3(self.epoch_stats_for_win[win_id].opdurations[GET], wall_duration)
 
 	def on_accumulate(self, data, thread, cpu_time, wall_time, perf_info):
 		wall_duration = (wall_time.stop - wall_time.start).to_ns()
@@ -229,3 +270,6 @@ class FormaSTrace(DumpiTrace):
 
 		win_id = self.wintb[data.win]
 		self.data_xfer_per_window[win_id] += data.origincount*self.type_sizes[data.origintype]
+
+		self.epoch_stats_for_win[win_id].callcount_per_opcode[ACC] += 1
+		fs.forma_streaming_stats_x3(self.epoch_stats_for_win[win_id].opdurations[ACC], wall_duration)

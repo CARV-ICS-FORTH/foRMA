@@ -65,7 +65,7 @@ def forma_parse_traces(tracefiles):
 	writer = DataFileWriter(open("rank_summaries.avro", "wb"), DatumWriter(), schema)
 
 	for rank, tracefile in enumerate(tracefiles):
-		with ft.FormaSTrace(tracefile) as trace:
+		with ft.FormaSTrace(tracefile, rank) as trace:
 			fl.forma_print(f'Now parsing {tracefile}.\n')
 
 			trace.read_stream() ## this will activate the callbacks and the computations therein.
