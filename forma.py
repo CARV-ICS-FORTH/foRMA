@@ -20,7 +20,11 @@
 
 
 
+<<<<<<< HEAD
 import argparse 
+=======
+import argparse
+>>>>>>> 50f8d79 (Substituted getopt with argparse when invoking foRMA and checking user inputs. Added ASCII art banner intro. All in forma.py)
 import sys 
 import glob, os
 import re
@@ -390,6 +394,7 @@ def main():
 	# except getopt.GetoptError:
 	# 	print ('Exception: wrong usage. Use  ' + str(sys.argv[0]) + ' -d <directory name> -t <timestamp> [ -a <action> ] instead')
 	# 	sys.exit()
+<<<<<<< HEAD
 
 	## set up how foRMA has to be invoked ...
 	forma_arg_parse = argparse.ArgumentParser(description="foRMA -- a methodology and a tool for profiling MPI RMA operation timing, designed to process traces produced by SST Dumpi.")
@@ -404,18 +409,44 @@ def main():
 	forma_arg_parse.add_argument("-f", "--fences", help="Produce fence statistics, output to file fences.txt.", action="store_true")
 
 
+=======
+
+
+	## set up how foRMA has to be invoked ...
+	forma_arg_parse = argparse.ArgumentParser(description="foRMA -- a methodology and a tool for profiling MPI RMA operation timing, designed to process traces produced by SST Dumpi.")
+	forma_arg_parse.add_argument("directory", help="Specifies the path to the directory in which the tracefiles to be parsed are located.", type=str)
+	forma_arg_parse.add_argument("timestamp", help="Specifies the timestamp that makes up the filenames of the tracefiles to be parsed.", type=str)
+	forma_arg_parse.add_argument("-d", "--debug", help="Turns on debug messages and is meant to be used for developing the tool and not when using it to profile traces.",
+                    action="store_true")
+	forma_arg_parse.add_argument("-s", "--summary", help="When specified, foRMA only produces a summary of statistics and exits without offering the interactive prompt.", action="store_true")
+	forma_arg_parse.add_argument("-a", "--all", help="Produce full analysis broken down per ranks and per windows, output to files epochs.txt, fences.txt, and calls.txt. Equivalent to -c -e -f.", action="store_true")
+	forma_arg_parse.add_argument("-c", "--calls", help="Output time spent in calls (per rank), as well as data transfer bounds, in file calls.txt.", action="store_true")
+	forma_arg_parse.add_argument("-e", "--epochs", help="Produce statistics per epoch (fence-based synchronization), output to file epochs.txt", action="store_true")
+	forma_arg_parse.add_argument("-f", "--fences", help="Produce fence statistics, output to file fences.txt.", action="store_true")
+
+
+>>>>>>> 50f8d79 (Substituted getopt with argparse when invoking foRMA and checking user inputs. Added ASCII art banner intro. All in forma.py)
 	## ... and get the required parameters from the command-line arguments
 	args = forma_arg_parse.parse_args()
 	dirname = args.directory
 	timestamp = args.timestamp
 	cmdlnaction = args.summary
 
+<<<<<<< HEAD
+=======
+
+	#print('\nfoRMA - RMA timing profiling. Preparing analysis of trace.')
+>>>>>>> 50f8d79 (Substituted getopt with argparse when invoking foRMA and checking user inputs. Added ASCII art banner intro. All in forma.py)
 	try:	
 		f=open ('forma-banner.txt','r')
 		print(''.join([line for line in f]))
 	except OSError as e:
 		print('\n\n.: foRMA: RMA Profiling for MPI :.\n\n')
+<<<<<<< HEAD
 		
+=======
+
+>>>>>>> 50f8d79 (Substituted getopt with argparse when invoking foRMA and checking user inputs. Added ASCII art banner intro. All in forma.py)
 
 	tracefiles = check_filepaths(dirname, timestamp)
 
