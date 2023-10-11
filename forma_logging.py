@@ -31,9 +31,6 @@ import fnmatch
 import numpy as np
 
 import logging
-import art
-import colorama
-from colorama import Fore
 
 
 def setup_forma_logger(level):
@@ -76,14 +73,11 @@ def forma_error(message):
 
 
 def forma_intro():
-	#Initialize colorama
-	colorama.init(autoreset=True)
-	print(Fore.MAGENTA + art.text2art('.: foRMA :.', font="small"))
-	print('.: RMA Profiling for MPI :.'.center(44))
 
-	# forma = ".: foRMA :."
-	# forma_centered = forma.center(os.get_terminal_size().columns)
-	# art.tprint(forma_centered)
-	# description = '.: RMA Profiling for MPI :.'
-	# centered = description.center(os.get_terminal_size().columns)
-	# print(centered+"\n\n\n")
+	try:	
+		f=open ('forma-banner.txt','r')
+	except OSError as e:
+		print('\n\n.: foRMA: RMA Profiling for MPI :.\n\n')
+		return
+		
+	print(''.join([line for line in f]))
