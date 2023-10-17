@@ -25,6 +25,7 @@ import logging
 from pydumpi import dtypes
 from pydumpi import DumpiTrace
 
+
 import forma_classes as fc
 import forma_logging as fl
 import forma_stats as fs
@@ -64,12 +65,26 @@ class FormaSTrace(DumpiTrace):
 		## in order to access epoch statistics for the currently active epoch for this window
 		self.epoch_stats_for_win = {}
 
+		## the following is done to ensure that epoch stats are dumped into the avro file in the 
+		## order in which their windows were created. we do this to facilitate epoch stats calculation
+		## across ranks if the user selects the 'e' option from the interactive menu. specifically, 
+		## we use curr_win_to_file to indicate the win id that is currently written to the avro file
+		## and append all epoch data of other windows to the corresponding entry in the win_epochs_buffer
+		## (key to which is win_id)
+		self.win_epochs_buffer = {}
+		self.curr_win_to_file = 0
+		self.to_print_wins = set()
+		self.to_print_done_wins = set()
+		
+		## creating all necessary avro file book-keeping 
 		if not os.path.exists('./forma_meta/'):
 			os.mkdir('./forma_meta/')
 
 		schema = avro.schema.parse(open("schemas/epochstats.avsc", "rb").read())
 		epochfilename = "./forma_meta/epochs-"+str(rank)+".avro"
 		self.writer = DataFileWriter(open(epochfilename, "wb"), DatumWriter(), schema)
+
+
 
 
 
@@ -145,22 +160,29 @@ class FormaSTrace(DumpiTrace):
 			self.trace_summary.callcount_per_opcode[FENCE] += 1
 			fs.forma_streaming_stats_x3(self.trace_summary.opdurations[FENCE], wall_duration)
 
+		## keeping score of win id and epoch count, so that we can write them in the avro file.
+		## was done for the unordered epoch stats dumping to avro file, might be redundant.
 		self.epochcount_per_window[win_id]+=1
-
 		self.epoch_stats_for_win[win_id].win_id = win_id
-		print(f'Window is {self.epoch_stats_for_win[win_id].win_id}, epoch is {self.epochcount_per_window[win_id]}')
 
+		## brief debug print, for reassurance...
+		# print(f'Window is {self.epoch_stats_for_win[win_id].win_id}, epoch is {self.epochcount_per_window[win_id]}')
 		
-		epoch_stats = []
-		for opcode in range(3):
-			div = self.epoch_stats_for_win[win_id].callcount_per_opcode[opcode]
-			if div != 0:
-				self.epoch_stats_for_win[win_id].opdurations[opcode][AVG] = self.epoch_stats_for_win[win_id].opdurations[opcode][AGR] / self.epoch_stats_for_win[win_id].callcount_per_opcode[opcode]
-			epoch_stats.append((self.epoch_stats_for_win[win_id].opdurations[opcode]).tolist())
+		# epoch_stats = []
+		# for opcode in range(3):
+		# 	div = self.epoch_stats_for_win[win_id].callcount_per_opcode[opcode]
+		# 	if div != 0:
+		# 		self.epoch_stats_for_win[win_id].opdurations[opcode][AVG] = self.epoch_stats_for_win[win_id].opdurations[opcode][AGR] / self.epoch_stats_for_win[win_id].callcount_per_opcode[opcode]
+		# 	epoch_stats.append((self.epoch_stats_for_win[win_id].opdurations[opcode]).tolist())
 		
-		fo.forma_print_stats_x4(["MPI_Get", "MPI_Put", "MPI_Accumulate"], epoch_stats)
+		# fo.forma_print_stats_x4(["MPI_Get", "MPI_Put", "MPI_Accumulate"], epoch_stats)
+		## debug print end
 
-		self.writer.append({"win_id": self.epoch_stats_for_win[win_id].win_id, 
+		## ensuring that epoch stats are written to avro file in the order in which 
+		## the windows were created. 
+		if win_id == self.curr_win_to_file:
+			# dump to avro file and reset 
+			self.writer.append({"win_id": self.epoch_stats_for_win[win_id].win_id, 
 				"epoch_nr": self.epochcount_per_window[win_id], 
 				"mpi_gets": int(self.epoch_stats_for_win[win_id].callcount_per_opcode[GET]), 
 				"mpi_puts": int(self.epoch_stats_for_win[win_id].callcount_per_opcode[PUT]), 
@@ -172,8 +194,31 @@ class FormaSTrace(DumpiTrace):
 				"mpi_get_dtb": self.epoch_stats_for_win[win_id].dtbounds[GET].tolist(), 
 				"mpi_put_dtb": self.epoch_stats_for_win[win_id].dtbounds[PUT].tolist(), 
 				"mpi_acc_dtb": self.epoch_stats_for_win[win_id].dtbounds[ACC].tolist()})
+			self.epoch_stats_for_win[win_id].reset()
 
-		self.epoch_stats_for_win[win_id].reset()
+		else:
+			# another window is currently written to avro file -- so, we have to stash 
+			# the epoch data 
+			epoch_stash = self.win_epochs_buffer.get(win_id)
+			if epoch_stash == None:
+				epoch_stash = []
+			epoch_stash.append(self.epoch_stats_for_win)
+			self.win_epochs_buffer[win_id] = epoch_stash
+
+		# self.writer.append({"win_id": self.epoch_stats_for_win[win_id].win_id, 
+		# 		"epoch_nr": self.epochcount_per_window[win_id], 
+		# 		"mpi_gets": int(self.epoch_stats_for_win[win_id].callcount_per_opcode[GET]), 
+		# 		"mpi_puts": int(self.epoch_stats_for_win[win_id].callcount_per_opcode[PUT]), 
+		# 		"mpi_accs": int(self.epoch_stats_for_win[win_id].callcount_per_opcode[ACC]), 
+		# 		"mpi_get_times": self.epoch_stats_for_win[win_id].opdurations[GET].tolist(), 
+		# 		"mpi_put_times": self.epoch_stats_for_win[win_id].opdurations[PUT].tolist(), 
+		# 		"mpi_acc_times": self.epoch_stats_for_win[win_id].opdurations[ACC].tolist(), 
+		# 		"tf_per_op": self.epoch_stats_for_win[win_id].xfer_per_opcode.tolist(), 
+		# 		"mpi_get_dtb": self.epoch_stats_for_win[win_id].dtbounds[GET].tolist(), 
+		# 		"mpi_put_dtb": self.epoch_stats_for_win[win_id].dtbounds[PUT].tolist(), 
+		# 		"mpi_acc_dtb": self.epoch_stats_for_win[win_id].dtbounds[ACC].tolist()})
+
+		# self.epoch_stats_for_win[win_id].reset()
 
 
 		
@@ -213,6 +258,10 @@ class FormaSTrace(DumpiTrace):
 		fs.forma_streaming_stats_x3(self.trace_summary.opdurations[WIN_CR], wall_duration)
 		fs.forma_streaming_stats_x3(self.trace_summary.winsizes, data.size)
 
+		if self.curr_win_to_file != win_id:
+			self.to_print_wins.add(win_id)
+
+
 	def on_win_free(self, data, thread, cpu_time, wall_time, perf_info):
 		wall_duration = (wall_time.stop - wall_time.start).to_ns()
 		#cpu_duration = (cpu_time.stop - cpu_time.start).to_ns()
@@ -224,6 +273,26 @@ class FormaSTrace(DumpiTrace):
 			sys.exit(1)
 
 		self.lifetime_of_window[win_id] = wall_time.stop.to_ns() - self.lifetime_of_window[win_id]
+
+		
+		## ensuring that epoch stats are written to avro file in the order in which 
+		## the windows were created. 
+		if win_id == self.curr_win_to_file:
+			self.to_print_wins.discard(win_id)
+			
+			for i in range(len(self.to_print_wins)):
+				self.curr_win_to_file += 1
+				if i in self.to_print_wins:
+					print("foRMA PRINTING STASHED WINDOW DATA!")
+				if i not in self.to_print_done_wins:
+					break
+				else:
+					self.self.to_print_wins.discard(i)
+
+		else:
+			self.to_print_done_wins.add(win_id)
+			#self.to_print_wins.remove(win_id)
+
 
 		del self.epoch_stats_for_win[win_id]
 

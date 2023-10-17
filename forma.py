@@ -49,6 +49,8 @@ import avro.schema
 from avro.datafile import DataFileReader, DataFileWriter
 from avro.io import DatumReader, DatumWriter
 
+from contextlib import redirect_stderr
+
 rma_tracked_calls = ['MPI_Win_create', 'MPI_Get', 'MPI_Put', 'MPI_Accumulate', 'MPI_Win_free', 'MPI_Win_fence']
 #logger = fa.setup_forma_logger(logging.DEBUG)
 
@@ -61,7 +63,7 @@ def main():
 
 
 	## user interaction initializations ##
-	action = 'r'
+	action = 'p'
 	cmdln_mode = False
 
 	log_level = logging.INFO
@@ -106,7 +108,9 @@ def main():
 
 ################ Stage #0 ends here ########################################
 
+	#os.system("exec 2> /dev/null")
 	exec_summary = fp.forma_parse_traces(tracefiles)
+	#os.system("exec 2>1")
 
 	total_callbacks = np.sum(exec_summary.callcount_per_opcode)
 	total_rmas = exec_summary.callcount_per_opcode[GET]+exec_summary.callcount_per_opcode[PUT]+exec_summary.callcount_per_opcode[ACC]
@@ -129,7 +133,7 @@ def main():
 	
 	while action != 'q':
 		if (not cmdln_mode):
-			if action == 'r':
+			if action == 'p':
 				print('\n\n\n------------------------------------------------------------------------------------------\n' + 
 				'------------------------------------ OPTIONS ---------------------------------------------\n' + 
 				'------------------------------------------------------------------------------------------\n' + 
@@ -225,8 +229,6 @@ def main():
 						epoch_summary.set_from_dict(summary)
 						epoch_summary.print_summary()
 					reader.close()
-
-
 
 			with open('fences.txt', 'w') as f:
 				sys.stdout = f # Change the standard output to the file we created.
