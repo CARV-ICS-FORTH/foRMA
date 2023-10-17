@@ -86,8 +86,6 @@ class FormaSTrace(DumpiTrace):
 
 
 
-
-
 	def on_init(self, data, thread, cpu_time, wall_time, perf_info):
 		#time_diff = wall_time.stop - wall_time.start
 		
@@ -205,23 +203,7 @@ class FormaSTrace(DumpiTrace):
 			epoch_stash.append(self.epoch_stats_for_win)
 			self.win_epochs_buffer[win_id] = epoch_stash
 
-		# self.writer.append({"win_id": self.epoch_stats_for_win[win_id].win_id, 
-		# 		"epoch_nr": self.epochcount_per_window[win_id], 
-		# 		"mpi_gets": int(self.epoch_stats_for_win[win_id].callcount_per_opcode[GET]), 
-		# 		"mpi_puts": int(self.epoch_stats_for_win[win_id].callcount_per_opcode[PUT]), 
-		# 		"mpi_accs": int(self.epoch_stats_for_win[win_id].callcount_per_opcode[ACC]), 
-		# 		"mpi_get_times": self.epoch_stats_for_win[win_id].opdurations[GET].tolist(), 
-		# 		"mpi_put_times": self.epoch_stats_for_win[win_id].opdurations[PUT].tolist(), 
-		# 		"mpi_acc_times": self.epoch_stats_for_win[win_id].opdurations[ACC].tolist(), 
-		# 		"tf_per_op": self.epoch_stats_for_win[win_id].xfer_per_opcode.tolist(), 
-		# 		"mpi_get_dtb": self.epoch_stats_for_win[win_id].dtbounds[GET].tolist(), 
-		# 		"mpi_put_dtb": self.epoch_stats_for_win[win_id].dtbounds[PUT].tolist(), 
-		# 		"mpi_acc_dtb": self.epoch_stats_for_win[win_id].dtbounds[ACC].tolist()})
-
-		# self.epoch_stats_for_win[win_id].reset()
-
-
-		
+	
 
 	def on_win_create(self, data, thread, cpu_time, wall_time, perf_info):
 		wall_duration = (wall_time.stop - wall_time.start).to_ns()
@@ -284,6 +266,20 @@ class FormaSTrace(DumpiTrace):
 				self.curr_win_to_file += 1
 				if i in self.to_print_wins:
 					print("foRMA PRINTING STASHED WINDOW DATA!")
+					for epochstats in self.win_epochs_buffer[i]:
+						self.writer.append({"win_id": epochstats.win_id, 
+							"epoch_nr": epochstats.epoch_nr, 
+							"mpi_gets": int(epochstats.callcount_per_opcode[GET]), 
+							"mpi_puts": int(epochstats.callcount_per_opcode[PUT]), 
+							"mpi_accs": int(epochstats.callcount_per_opcode[ACC]), 
+							"mpi_get_times": epochstats.opdurations[GET].tolist(), 
+							"mpi_put_times": epochstats.opdurations[PUT].tolist(), 
+							"mpi_acc_times": epochstats.opdurations[ACC].tolist(), 
+							"tf_per_op": epochstats.xfer_per_opcode.tolist(), 
+							"mpi_get_dtb": epochstats.dtbounds[GET].tolist(), 
+							"mpi_put_dtb": epochstats.dtbounds[PUT].tolist(), 
+							"mpi_acc_dtb": epochstats.dtbounds[ACC].tolist()})
+
 				if i not in self.to_print_done_wins:
 					break
 				else:

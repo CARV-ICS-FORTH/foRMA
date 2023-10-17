@@ -32,6 +32,10 @@ import forma_trace as ft
 
 from forma_constants import *
 
+import avro.schema
+from avro.datafile import DataFileReader, DataFileWriter
+from avro.io import DatumReader, DatumWriter
+
 
 """ The following function should be used to update 
 the min, max, and aggregate values of a stream of 
@@ -103,3 +107,19 @@ def forma_merge_stats_x4(current_stats, new_stats):
 	## update aggregate
 	#new_agr = current_stats[AGR] + new_val
 	current_stats[AGR] += new_stats[AGR]
+
+
+
+def forma_aggregate_epoch_stats(rank_nr):
+	# with open('epochs.txt', 'w') as f:
+	# 	epoch_summary = fc.epochSummary()
+	# 	schema = avro.schema.parse(open("schemas/summary.avsc", "rb").read())
+	# 	for rank_id in range(0, exec_summary.ranks):
+	# 		epochsumfile = "./forma_meta/epochs-"+str(rank_id)+".avro"
+	# 		reader = DataFileReader(open(epochsumfile, "rb"), DatumReader(schema))
+	# 		for rid, summary in enumerate(reader):
+	# 			epoch_summary.set_from_dict(summary)
+	# 			#epoch_summary.print_summary()
+	# 			print(summary)
+	# 		reader.close()
+	print('aggregating epoch stats')
