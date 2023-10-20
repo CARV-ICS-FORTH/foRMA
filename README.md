@@ -1,12 +1,26 @@
+![](forma-banner.png)
+
 # What is foRMA
 
-foRMA is a methodology and a tool for profiling MPI RMA operation timing, designed to process traces produced by [SST Dumpi](https://github.com/justacid/pydumpi). 
+foRMA is a methodology and a tool for profiling MPI RMA operations. It is designed to process execution traces produced by [SST Dumpi](https://github.com/justacid/pydumpi). 
 
-The tool offers timing analysis options such as statistics on data transfer volume and upper bound of data transfer duration, organized by RMA  synchronization epoch, statistics on fence execution duration, across ranks, statistics on total time spent in various MPI RMA calls.
+The tool constructs a profile of the traced execution, centered around the concept of the fence-based RMA  synchronization epoch. It can provide statistical information about it on a per-execution, per-rank, or a per-window basis.
+
+Specifically, it offers analysis options such as statistics on RMA operation duration and upper bounds of data transfers, statistics on fence execution duration, on fence arrival across ranks, statistics on total time spent in various MPI RMA calls, etc. Furthermore, it tracks data transfers and provides statistics about data transfer volumes. 
 
 ⚠️ _Notice that currently, epochs are assumed to be based on fence synchronization (```MPI_Win_fence()```)_.
 
-foRMA is agnostic of the source code or the executable that was used to produce traces. Instead, it processes the trace files of a given execution in order to come up with data on timing analysis. 
+foRMA is agnostic of the source code or the executable that was used to produce traces. Instead, it processes the trace files of a given execution in order to come up with data required for a profile. 
+
+The RMA operations tracked and profiled by foRMA are currently:
+
+* MPI_Win_create
+* MPI_Win_free
+* MPI_Win_fence
+* MPI_Get
+* MPI_Put
+* MPI_Accumulate
+
 
 In its current implementation, foRMA consists of Python 3 scripting for parsing SST Dumpi trace files and extract timing information regarding MPI RMA operations from them. To do so, it takes advantage of the [pydumpi](https://github.com/justacid/pydumpi) module, which provides Python bindings for the SST Dumpi library. 
 
@@ -91,19 +105,19 @@ the corresponding rank. We refer to those as trace files.
 
 ##### Step 3: Use foRMA on produced traces in order to obtain a timing analysis
 
-Invoke the RMA Profiler on the tracefiles produced in the previous step. 
-
-```
-$ forma.py -d <trace dir> -t <timestamp> [-a <option>]
-```
-where `<trace dir>` is the directory where the SST Dumpi output traces are stored and `<timestamp>` is the timestamp in the filename of the trace. 
+foRMA has a command line mode and an interactive mode. In either, foRMA first processes the tracefiles and prints out an execution summary to the screen. Then, in the interactive mode it prints out an option menu for the user, while in command-line mode, it executes the given command line option.
 
 
 ## foRMA Usage
 
-The tool has a command line mode and an interactive mode. In order to execute the command line mode, use the optional `-a <option>` command line argument. This acts as a shortcut that will cause the tool to directly calculate the requested statistics and exit. In contrast, when the tool is executed in interactive mode (i.e. without the `-a <option>` command line argument), it offers the possibility of requesting various of the statistic options, one after the other.
+Invoke foRMA on the tracefiles produced in the previous step, as follows:
 
-The offered options are:
+```
+$ forma.py <trace dir> <timestamp>
+```
+where `<trace dir>` is the directory where the SST Dumpi output traces are stored and `<timestamp>` is the timestamp in the filename of the trace. This will start foRMA in the interactive mode. In order to enter command-line mode, add "-" and any of the options of the interactive menu, to the foRMA invocation.
+
+The main options are:
 
 - `-e`: Produces statistics per epoch.
 Outputs data transfer bounds and data volume information into file epochs.txt. Data is calculated by memory window found in the execution. For each memory window, the relevant information is organized by synchronization epochs on that window. 
@@ -113,13 +127,19 @@ Outputs first and last arrival to MPI_Win_fence instances in execution, into fil
 Outputs MPI RMA call durations and statistics on them, into file calls.txt. Data is calculated by rank found to participate in the execution. For each rank, information is organized by RMA opcode. 
 - `-a`: Prepare a full analysis, i.e. calculate all of the above. Produces all three of the aforementioned output files. 
 
+⚠️ _For a full list of foRMA options, as well as additional details on each of them, invoke foRMA as follows in order to get the up-to-date information on the foRMA version you are using:_
+
+```
+$ forma.py -h
+```
+
+
 ## Output
 Independently of the provided command line argument, foRMA prepares a summary of total execution times and operation durations, as well as data transfer bounds and bytes transferred per memory window. This summary is printed out in the standard output. 
 
 Further foRMA command line options result in detailed statistics per rank or memory window and epoch. These results are stored in files, for better readability and searchability. 
 
 Both in the summaries as well as the detailed statistics, and both when presenting durations or data volumes, foRMA also calculates min, max, averages and medians, as well as standard deviations. The indexes labeled "aggregate" may refer to a sum of values across ranks (i.e. total execution time or total time spent in MPI_Get) or across windows (i.e. total bytes transferred in execution).
-
 
 
 # Acknowledgements
