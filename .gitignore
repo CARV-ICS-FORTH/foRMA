@@ -47,3 +47,9 @@ dumpi.conf
 mpi-examples/
 out/
 rma-acc-multi
+github-token
+per_rank.txt
+per_window.txt
+summary.txt
+win_lifetime
+
