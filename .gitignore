@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 .graph500test.swo
 .graph500test.swp
 README.md.backup
@@ -44,10 +43,8 @@ stats-bin0-0.tbl
 trace_sample
 win_duration
 win_lifetimebug
-=======
 bug
 rmacalls.conf
->>>>>>> 68d5235 (Added to .gitignore)
 dumpi.conf
 mpi-examples/
 out/
