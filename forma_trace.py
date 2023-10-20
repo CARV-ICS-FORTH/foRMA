@@ -148,7 +148,11 @@ class FormaSTrace(DumpiTrace):
 		try:
 			win_id = self.wintb[data.win]
 		except KeyError:
-			fl.forma_logger.warning(f'Key {data.win} not in wintb!')
+			fl.forma_logger.debug(f'Key {data.win} not in wintb!')
+			fl.forma_error(f'Window ID error. Please make sure that you are using a well-formed trace.\n'+
+				'(Make sure that you are using entire and corrrectly formated SST Dumpi tracefiles '+
+				'and notice that the current version of foRMA relies on detecting only MPI_Win_create '+
+				'calls for window creation.')
 			sys.exit(1)
 
 		## TODO!!!
