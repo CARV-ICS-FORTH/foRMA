@@ -1,23 +1,11 @@
 #!/usr/bin/python3
 
-import getopt 
 import sys 
 import glob, os
 import re
 import fnmatch
 
 import ctypes
-
-import csv
-import pickle
-import pyarrow as pa
-import pyarrow.parquet as pq
-
-import avro.schema
-from avro.datafile import DataFileReader, DataFileWriter
-from avro.io import DatumReader, DatumWriter
-
-from fastavro import reader
 
 import logging
 

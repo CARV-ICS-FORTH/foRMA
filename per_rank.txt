@@ -1,0 +1,22 @@
+RMA operation durations per rank -- Total ranks: 2
+
+RANK 0 Operation Durations
+Total exec. time: 0
+Total time in RMA: 0
+                  aggregate    min    max    avg    mean    std dev
+--------------  -----------  -----  -----  -----  ------  ---------
+MPI_Get                   0      0      0      0       0          0
+MPI_Put                   0      0      0      0       0          0
+MPI_Accumulate            0      0      0      0       0          0
+MPI_Win_fence             0      0      0      0       0          0
+
+RANK 1 Operation Durations
+Total exec. time: 0
+Total time in RMA: 0
+                  aggregate    min    max    avg    mean    std dev
+--------------  -----------  -----  -----  -----  ------  ---------
+MPI_Get                   0      0      0      0       0          0
+MPI_Put                   0      0      0      0       0          0
+MPI_Accumulate            0      0      0      0       0          0
+MPI_Win_fence             0      0      0      0       0          0
+

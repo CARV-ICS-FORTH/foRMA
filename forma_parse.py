@@ -27,13 +27,6 @@ import fnmatch
 
 import ctypes
 
-import csv
-import pickle
-import pyarrow as pa
-
-# import avro.schema
-# from avro.datafile import DataFileReader, DataFileWriter
-# from fastavro import reader
 
 import logging
 
