@@ -50,60 +50,36 @@ def forma_parse_traces(tracefiles):
 	epochs_per_window_per_rank = []
 	callcount_per_opcode = [0, 0, 0, 0, 0, 0, 0, 0]
 
-	for tracefile in tracefiles:
 
-		# csv_file = tracefile+".csv"
-		# pickle_file = tracefile+".pickle"
-		# parquet_file = tracefile+".parquet"
+	try: 
+		for tracefile in tracefiles:
+			with ft.FormaIMTrace(tracefile) as trace:
+				## keeping next line in order to remember where to find sizes in -- check pydumpi/undumpi.py
 
-		# with ft.FormaIMTrace(tracefile, csv_file, pickle_file, parquet_file) as trace:
-		with ft.FormaIMTrace(tracefile) as trace:
-			## keeping next line in order to remember where to find sizes in -- check pydumpi/undumpi.py
+				print(f'now reading {tracefile}...\t\t', end="")
+				trace.read_stream()
+				#print(f'Fence count for rank {rank} is: {trace.fence_count}')
+				print('Done.\n')
+			rank += 1
+			opdata_per_rank.append(trace.opdata_per_window)
+			total_exec_time_per_rank.append(trace.total_exec_time)
+			all_window_sizes_per_rank.append(trace.all_window_sizes)
+			all_window_durations_per_rank.append(trace.all_window_durations)
+			epochs_per_window_per_rank.append(trace.epochcount_per_window)
 
-			print(f'now reading {tracefile}...\t\t', end="")
-			trace.read_stream()
-			#print(f'Fence count for rank {rank} is: {trace.fence_count}')
-			print('Done.\n')
-		rank += 1
-		opdata_per_rank.append(trace.opdata_per_window)
-		total_exec_time_per_rank.append(trace.total_exec_time)
-		all_window_sizes_per_rank.append(trace.all_window_sizes)
-		all_window_durations_per_rank.append(trace.all_window_durations)
-		epochs_per_window_per_rank.append(trace.epochcount_per_window)
+			
 
-		##
-		# temp = np.array(trace.opdata_per_window, dtype=object) 
-		# flatarray = np.concatenate(temp).ravel()
-		# print(flatarray)
-		# #binarray = np.array(flatarray, dtype='i4')
-		# print(f'Size of opdata for rank: {asizeof.asizeof(trace.opdata_per_window)}')
-		# print(f'Size of flattened list: {asizeof.asizeof(flatarray)}')
-		# print(f'Size of flattened list data: {asizeof.asizeof(flatarray.data)}')
-		#print(f'Size of binary list: {asizeof.asizeof(binarray)}')
-		#np.savez("flatarraytest"+str(rank), flatarray)
-		#flatarray.astype('i4').tofile("flatarraytest"+str(rank))
-		##
+			callcount_per_opcode = [sum(i) for i in zip(callcount_per_opcode, trace.callcount_per_opcode)]
 
-		callcount_per_opcode = [sum(i) for i in zip(callcount_per_opcode, trace.callcount_per_opcode)]
+			#print(f'current trace produced by a run of source code : {(c_char * trace.source_file).from_address(0)}')
 
-		#print(f'current trace produced by a run of source code : {(c_char * trace.source_file).from_address(0)}')
+			#print("{0}".format(trace.source_file.argv[0]), end="\n")
 
-		#print("{0}".format(trace.source_file.argv[0]), end="\n")
-
-		#sourcefile = trace.source_file
-		#print(f'current trace produced by a run of source code : {sourcefile}')
-
-
-		# with open(tracefile+".avro", 'rb') as file_object: 
-		# 	csv_file = csv.writer(open(tracefile+".rc.csv", "w+")) 
-		# 	head = True 
-		# 	for emp in reader(file_object): 
-		# 		if head: # write
-		# 			header = emp.keys() 
-		# 			csv_file.writerow(header) 
-		# 			head = False # write normal row 
-		# 		csv_file.writerow(emp.values())
-
+			#sourcefile = trace.source_file
+			#print(f'current trace produced by a run of source code : {sourcefile}')
+	except:
+		print('Trace file error: make sure the trace files you are using are in SST Dumpi format and well-formatted.')
+		sys.exit(2)
 
 	return rank, trace.win_count, callcount_per_opcode, opdata_per_rank, total_exec_time_per_rank, all_window_sizes_per_rank, all_window_durations_per_rank, epochs_per_window_per_rank
 

@@ -61,16 +61,19 @@ def check_filepaths(dirname, timestamp):
 			ordered_files.append(filepath)
 
 	#print(ordered_files)
-	total_file_size = total_file_size/1024
+	total_file_size = round(total_file_size/1024)
+	if total_file_size == 0:
+		print('Trace files seem empty. Make sure that you are using well-formatted SST Dumpi outputs.')
+		sys.exit(1)
 
 	## Read metafile and print it -- TODO: to be used more extensively later
 	try:
 		metafile = util.read_meta_file(str(dirname)+'/dumpi-'+format(str(timestamp))+'.meta')
 	except FileNotFoundError:
-		print('Trace files not found. Check timestamp formatting (-t option).\n\n')
+		print('Trace files not found. Check timestamp formatting.\n\n')
 		sys.exit(1)
 
-	print(f'\nAbout to parse a total of {round(total_file_size)} KBytes of binary trace files size.\n')
+	print(f'\nAbout to parse a total of {total_file_size} KBytes of binary trace files size.\n')
 
 	return(ordered_files)
 
@@ -360,38 +363,6 @@ def main():
 	avg_epoch = 0
 
 
-	# try: 
-	# 	if len(argv) < 4 or len(argv) > 8:
-	# 		print ('usage: ' + str(sys.argv[0]) + ' -d <directory name> -t <timestamp> [ -a <action> ] [ -v <version>]')
-	# 		sys.exit(2)
-	# 	else:
-	# 		opts, args = getopt.getopt(argv, 'd:t:a:l:')
-	# 		for o, a in opts:
-	# 			if o == "-d": 
-	# 				dirname = a
-	# 			elif o == "-t":
-	# 				timestamp = a
-	# 			elif o == "-a":
-	# 				action = a
-	# 				cmdlnaction = True
-	# 			#elif o == "-v":
-	# 				#version = a
-	# 			elif o == "-l":
-	# 				level=set_log_level(a)
-	# 				if level is None:
-	# 					raise ValueError("No such logging level! Must be one of: {critical, error, warn, warning, info, debug}")
-	# 					#sys.exit(2)
-	# 			else: 
-	# 				assert False, "No such command-line option!"
-	# 				sys.exit(2)
-	# 		#logging.debug('rma profiler: Directory name is : ' + format(str(dirname)))
-	# 		#logging.debug('rma profiler: Timestamp is : ' + format(str(timestamp)))
-			
-	# except getopt.GetoptError:
-	# 	print ('Exception: wrong usage. Use  ' + str(sys.argv[0]) + ' -d <directory name> -t <timestamp> [ -a <action> ] instead')
-	# 	sys.exit()
-
-
 	## set up how foRMA has to be invoked ...
 	forma_arg_parse = argparse.ArgumentParser(description="foRMA -- a methodology and a tool for profiling MPI RMA operation timing, designed to process traces produced by SST Dumpi.")
 	forma_arg_parse.add_argument("directory", help="Specifies the path to the directory in which the tracefiles to be parsed are located.", type=str)
@@ -436,6 +407,7 @@ def main():
 	## adjust log level to command line option
 	#logging.basicConfig(level=logging.INFO)
 	logging.basicConfig(level=level)
+
 
 	ranks, wins, callcount_per_opcode, opdata_per_rank, total_exec_times_per_rank, all_window_sizes_per_rank, all_window_durations_per_rank, epochs_per_window_per_rank = fp.forma_parse_traces(tracefiles)
 	
