@@ -1,8 +1,8 @@
 ![](forma-banner.png)
 
-# What is foRMA
+# What is _foRMA_
 
-foRMA is a methodology and a tool for profiling MPI RMA operations. It is designed to process execution traces produced by [SST Dumpi](https://github.com/justacid/pydumpi). 
+_foRMA_ is a methodology and a tool for profiling MPI RMA operations. It is designed to process execution traces produced by [SST Dumpi](https://github.com/justacid/pydumpi). 
 
 The tool constructs a profile of the traced execution, centered around the concept of the fence-based RMA  synchronization epoch. It can provide statistical information about it on a per-execution, per-rank, or a per-window basis.
 
@@ -10,9 +10,9 @@ Specifically, it offers analysis options such as statistics on RMA operation dur
 
 ⚠️ _Notice that currently, epochs are assumed to be based on fence synchronization (```MPI_Win_fence()```)_.
 
-foRMA is agnostic of the source code or the executable that was used to produce traces. Instead, it processes the trace files of a given execution in order to come up with data required for a profile. 
+_foRMA_ is agnostic of the source code or the executable that was used to produce traces. Instead, it processes the trace files of a given execution in order to come up with data required for a profile. Hence, _foRMA_ does not "know" what the epoch was used for in the traced application.
 
-The RMA operations tracked and profiled by foRMA are currently:
+The RMA operations tracked and profiled by _foRMA_ are currently:
 
 * MPI_Win_create
 * MPI_Win_free
@@ -22,11 +22,11 @@ The RMA operations tracked and profiled by foRMA are currently:
 * MPI_Accumulate
 
 
-In its current implementation, foRMA consists of Python 3 scripting for parsing SST Dumpi trace files and extract timing information regarding MPI RMA operations from them. To do so, it takes advantage of the [pydumpi](https://github.com/justacid/pydumpi) module, which provides Python bindings for the SST Dumpi library. 
+In its current implementation, _foRMA_ consists of Python 3 scripting for parsing SST Dumpi trace files and extracting  information regarding MPI RMA operations from them. To do so, it takes advantage of the [pydumpi](https://github.com/justacid/pydumpi) module, which provides Python bindings for the SST Dumpi library. 
 
 # Pre-requisites
 
-Apart from an up-to-date Python 3, foRMA relies on the following (fast-forward to  [Getting Started](#getting-started) section for installation details.)
+Apart from an up-to-date Python 3, _foRMA_ relies on the following (fast-forward to  [Getting Started](#getting-started) section for installation details.)
 
 * **SST Dumpi**: Part of the popular SST simulator (http://sst-simulator.org/). Specifically, Dumpi is a library for instrumenting MPI calls so that they produce (referred to as the `dumpi` tool) or replay (referred to as the `undumpi` tool) a trace of the execution of an MPI program. The library is distributed under an open source license and can be downloaded from [GitHub](https://github.com/sstsimulator/sst-dumpi). 
 * **Pydumpi**: A Python module which provides bindings for the SST dumpi trace library. Is is available at PyPi and can be installed through `pip3`. Its source code is also available at http://github.com/justacid/pydumpi.
@@ -103,19 +103,20 @@ $ mpirun -np N -x LD_LIBRARY_PATH = $LD_LIBRARY_PATH:DUMPI_PATH/lib mpi-app
 The above command creates N files with the extension .bin as well as a file with the extension .meta. Each of the .bin files are named in the format `dumpi-<timestamp>-X.bin` , where `<timestamp>` is the timestamp of when the program was executed and X is the number of the rank, i.e. it takes values from 0 to N − 1. Each of the .bin files contains the trace of the execution for
 the corresponding rank. We refer to those as trace files.
 
-##### Step 3: Use foRMA on produced traces in order to obtain a timing analysis
+##### Step 3: Use _foRMA_ on produced traces in order to obtain a timing analysis
 
-foRMA has a command line mode and an interactive mode. In either, foRMA first processes the tracefiles and prints out an execution summary to the screen. Then, in the interactive mode it prints out an option menu for the user, while in command-line mode, it executes the given command line option.
+_foRMA_ has a command line mode and an interactive mode. In either, _foRMA_ first processes the tracefiles and prints out an execution summary to the screen. Then, in the interactive mode it prints out an option menu for the user, while in command-line mode, it executes the given command line option.
 
+⚠️ _Important notice:_ _foRMA_ requres well-formed SST Dumpi files as input, i.e. files as they have been produced by an execution that relies on the SST Dumpi library as they are. _This includes the .meta file produced by SST Dumpi for each trace._ Ommitting any of the produced output files or modifying their content by hand will cause _foRMA_ to exit.  
 
-## foRMA Usage
+## _foRMA_ Usage
 
-Invoke foRMA on the tracefiles produced in the previous step, as follows:
+Invoke _foRMA_ on the tracefiles produced in the previous step, as follows:
 
 ```
-$ forma.py <trace dir> <timestamp>
+$ foRMA.py <trace dir> <timestamp>
 ```
-where `<trace dir>` is the directory where the SST Dumpi output traces are stored and `<timestamp>` is the timestamp in the filename of the trace. This will start foRMA in the interactive mode. In order to enter command-line mode, add "-" and any of the options of the interactive menu, to the foRMA invocation.
+where `<trace dir>` is the directory where the SST Dumpi output traces are stored and `<timestamp>` is the timestamp in the filename of the trace. This will start _foRMA_ in the interactive mode. In order to enter command-line mode, add "-" and any of the options of the interactive menu, to the _foRMA_ invocation.
 
 The main options are:
 
@@ -135,11 +136,11 @@ $ forma.py -h
 
 
 ## Output
-Independently of the provided command line argument, foRMA prepares a summary of total execution times and operation durations, as well as data transfer bounds and bytes transferred per memory window. This summary is printed out in the standard output. 
+Independently of the provided command line argument, _foRMA_ prepares a summary of total execution times and operation durations, as well as data transfer bounds and bytes transferred per memory window. This summary is printed out in the standard output. 
 
-Further foRMA command line options result in detailed statistics per rank or memory window and epoch. These results are stored in files, for better readability and searchability. 
+Further _foRMA_ command line options result in detailed statistics per rank or memory window and epoch. These results are stored in files, for better readability and searchability. 
 
-Both in the summaries as well as the detailed statistics, and both when presenting durations or data volumes, foRMA also calculates min, max, averages and medians, as well as standard deviations. The indexes labeled "aggregate" may refer to a sum of values across ranks (i.e. total execution time or total time spent in MPI_Get) or across windows (i.e. total bytes transferred in execution).
+Both in the summaries as well as the detailed statistics, and both when presenting durations or data volumes, _foRMA_ also calculates min, max, averages and medians, as well as standard deviations. The indexes labeled "aggregate" may refer to a sum of values across ranks (i.e. total execution time or total time spent in MPI_Get) or across windows (i.e. total bytes transferred in execution).
 
 
 # Acknowledgements
