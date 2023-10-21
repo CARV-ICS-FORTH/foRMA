@@ -62,15 +62,20 @@ def check_filepaths(dirname, timestamp):
 
 	#print(ordered_files)
 	total_file_size = total_file_size/1024
+	total_file_size = round(total_file_size/1024)
+	if total_file_size == 0:
+		print('Trace files seem empty. Make sure that you are using well-formatted SST Dumpi outputs.')
+		sys.exit(1)
+
 
 	## Read metafile and print it -- TODO: to be used more extensively later
 	try:
 		metafile = util.read_meta_file(str(dirname)+'/dumpi-'+format(str(timestamp))+'.meta')
 	except FileNotFoundError:
-		print('Trace files not found. Check timestamp formatting (-t option).\n\n')
+		print('Trace files not found. Check timestamp formatting.\n\n')
 		sys.exit(1)
 
-	print(f'\nAbout to parse a total of {round(total_file_size)} KBytes of binary trace files size.\n')
+	print(f'\nAbout to parse a total of {total_file_size} KBytes of binary trace files size.\n')
 
 	return(ordered_files)
 
