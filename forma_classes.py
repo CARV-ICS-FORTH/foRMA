@@ -224,3 +224,40 @@ class epochSummary:
 		self.dtbounds[GET]		= dict["mpi_get_dtb"]
 		self.dtbounds[PUT]		= dict["mpi_put_dtb"]
 		self.dtbounds[ACC]		= dict["mpi_acc_dtb"]
+
+
+	def print_summary(self):
+		print(f'----------------------------- Summary for EPOCH {self.epoch_nr} ------------------------------------------\n')
+		# '\n' +
+		# f'-- # of ranks\t\t\t:   {self.ranks}\n' +
+		# f'-- # of memory windows\t\t:   {self.wins}\n' +
+		# f'-- # of MPI_Get calls\t\t:   {self.callcount_per_opcode[GET]}\n' +
+		# f'-- # of MPI_Put calls\t\t:   {self.callcount_per_opcode[PUT]}\n' +
+		# f'-- # of MPI_Accumulate calls\t:   {self.callcount_per_opcode[ACC]}\n' +
+		# f'-- # of MPI_Win_fence calls\t:   {self.callcount_per_opcode[FENCE]}\n' +
+		# '\n')
+
+
+		# ## if we use forma_print_stats_x6, which is a function written for a previous version 
+		# ## of foRMA, we have to convert numpy arrays to list of lists, for backwards compatibility.
+		# ## this is why variables overalls, winstats, and dtbounds_stats, as well as method tolist()
+		# ## are necessary 
+		# overalls = np.stack((self.exectime, self.rmatime))
+		# print('------------------------------------------------------------------------------------------\n' +
+		# '------------------------ [Operation] Durations (nsec) ------------------------------------\n')
+		# fp.forma_print_stats_x6(["Total exec. time", "Total time in RMA", "MPI_Get", "MPI_Put", "MPI_Accumulate", "MPI_Win_fence"], (np.concatenate((overalls, self.opdurations[0:4]))).tolist())
+
+
+		# winstats = np.stack((self.winsizes, self.xfer_per_win, self.epochs, self.windurations))
+		# print('------------------------------------------------------------------------------------------\n' +
+		# '---------------------------- Memory Windows ----------------------------------------------\n')
+		# fp.forma_print_stats_x4(["Window sizes (B)", "Bytes transferred/win.", "Epochs per win.", "Window durations (nsec)"], winstats.tolist())
+
+		# dtbounds_stats = []
+		# for i in range(len(self.dtbounds)):
+		# 	dtbounds_stats.append((self.dtbounds[i][0:4]).tolist())
+		# print('------------------------------------------------------------------------------------------\n' +
+		# '-------------------------- Data Transfer Bounds ------------------------------------------\n')
+		# fp.forma_print_stats_x4(["MPI_Get", "MPI_Put", "MPI_Accumulate"], dtbounds_stats)
+		
+		return True

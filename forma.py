@@ -149,7 +149,7 @@ def main():
 		if action == 'q':
 			sys.exit()
 		elif action == 'e': #
-			print('Preparing results...')
+			fl.forma_print('Preparing results...')
 			epoch_count = -1
 			epoch_summary = fc.epochSummary()
 			schema = avro.schema.parse(open("schemas/summary.avsc", "rb").read())
@@ -186,12 +186,13 @@ def main():
 			# 			print(summary)
 			# 		reader.close()
 			fs.forma_aggregate_epoch_stats(exec_summary.ranks)
-			print('Statistics per epoch (fence-based synchronization) can be found in file epochs.txt\n')
+			fl.forma_print('Statistics per epoch (fence-based synchronization) can be found in file epochs.txt\n')
 		elif action == 'f':
-			print('Preparing results...')
-			print('Fence statistics can be found in file fences.txt.\n')
+			fl.forma_print('Option not yet fully supported by current foRMA version.')
+			# fl.forma_print('Preparing results...')
+			# fl.forma_print('Fence statistics can be found in file fences.txt.\n')
 		elif action == 'c':
-			print('Preparing results...')
+			fl.forma_print('Preparing results...')
 			rank_summary = fc.formaSummary()
 			schema = avro.schema.parse(open("schemas/summary.avsc", "rb").read())
 			reader = DataFileReader(open("rank_summaries.avro", "rb"), DatumReader(schema))
@@ -203,7 +204,7 @@ def main():
 					rank_summary.print_summary()
 				reader.close()
 			sys.stdout = original_stdout # Reset the standard output to its original value
-			print('Time spent in calls (per rank), as well as data transfer bounds, can be found in file calls.txt\n')
+			fl.forma_print('Time spent in calls (per rank), as well as data transfer bounds, can be found in file calls.txt\n')
 		elif action == 'r':
 			try:
 				rank_id = int(input(f'Please select rank ID [0 - {exec_summary.ranks-1}]: '))
@@ -211,12 +212,12 @@ def main():
 				#     rank_id = int(rank_input)
 			except ValueError:
 				#if isinstance(rank_input, (str)):
-				print('Invalid rank ID!')
+				fl.forma_error('Invalid rank ID!')
 				continue
 			if rank_id not in range(0, exec_summary.ranks):
-			    print('Invalid rank ID!')
+			    fl.forma_error('Invalid rank ID!')
 			    continue
-			print(f'Summary for rank {rank_id}\n')
+			fl.forma_print(f'Summary for rank {rank_id}\n')
 			rank_summary = fc.formaSummary()
 			schema = avro.schema.parse(open("schemas/summary.avsc", "rb").read())
 			reader = DataFileReader(open("rank_summaries.avro", "rb"), DatumReader(schema))
@@ -227,7 +228,7 @@ def main():
 					rank_summary.print_summary()
 			reader.close()
 		elif action == 'a':
-			print('Preparing results...')
+			fl.forma_print('Preparing results...')
 			original_stdout = sys.stdout # Save a reference to the original standard output
 
 			rank_summary = fc.formaSummary()
@@ -246,23 +247,24 @@ def main():
 				epoch_summary = fc.epochSummary()
 				schema = avro.schema.parse(open("schemas/summary.avsc", "rb").read())
 				for rank_id in range(0, exec_summary.ranks):
-					epochsumfile = "./forma_meta/epochs-"+str(rank)+".avro"
+					epochsumfile = "./forma_meta/epochs-"+str(rank_id)+".avro"
 					reader = DataFileReader(open(epochsumfile, "rb"), DatumReader(schema))
 					for rid, summary in enumerate(reader):
 						epoch_summary.set_from_dict(summary)
 						epoch_summary.print_summary()
 					reader.close()
-				fs.forma_aggregate_epoch_stats()
+				fs.forma_aggregate_epoch_stats(exec_summary.ranks)
 
 			with open('fences.txt', 'w') as f:
 				sys.stdout = f # Change the standard output to the file we created.
 				
 			sys.stdout = original_stdout # Reset the standard output to its original value
-			print('Full analysis broken down per ranks and per windows can be found in files epochs.txt, fences.txt, and calls.txt\n')
+			#fl.forma_print('Full analysis broken down per ranks and per windows can be found in files epochs.txt, fences.txt, and calls.txt\n')
+			fl.forma_print('Full analysis broken down per ranks and per windows can be found in files epochs.txt and calls.txt\n')
 		elif action == 'p':
 			pass
 		else:
-			print('Invalid action option!')
+			fl.forma_print('Invalid action option!')
 			action = 'r'
 
 		if cmdln_mode:

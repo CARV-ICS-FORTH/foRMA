@@ -23,7 +23,6 @@ __author__ = "Lena Kanellou"
 __version__ = "0.1.1"
 
 
-import getopt 
 import sys 
 import glob, os
 import re
