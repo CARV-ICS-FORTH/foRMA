@@ -67,8 +67,11 @@ def check_filepaths(dirname, timestamp):
 		return None
 
 	#print(ordered_files)
-	total_file_size = total_file_size/1024
-	fl.forma_print(f'About to parse a total of {round(total_file_size)} KBytes of binary trace files size.\n')
+	total_file_size = round(total_file_size/1024)
+	if total_file_size == 0:
+		fl.forma_print('Trace file size is 0. Make sure that you are using well-formatted SST Dumpi output files.')
+		sys.exit(2)
+	fl.forma_print(f'About to parse a total of {total_file_size} KBytes of binary trace files size.\n')
 
 	## Read metafile and print it -- TODO: to be used more extensively later
 	try:
