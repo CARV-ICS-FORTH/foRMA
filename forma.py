@@ -150,45 +150,13 @@ def main():
 			sys.exit()
 		elif action == 'e': #
 			fl.forma_print('Preparing results...')
-			epoch_count = -1
-			epoch_summary = fc.epochSummary()
-			schema = avro.schema.parse(open("schemas/summary.avsc", "rb").read())
-			epochfiles = []
-			readers = []
-			for rank_id in range(0, exec_summary.ranks):
-				epochsumfile = "./forma_meta/epochs-"+str(rank_id)+".avro"
-				epochfiles.append(epochsumfile)
-				readers.append(DataFileReader(open(epochsumfile, "rb"), DatumReader(schema)))
-				next(readers[rank_id])
-			keep_reading = True
-
-			with open('epochs.txt', 'w') as f:
-				#for epochnr in range(1):
-				while(keep_reading):
-					for rank_id in range(0, exec_summary.ranks):
-						try:
-							summary = next(readers[rank_id])
-						except StopIteration:
-							keep_reading = False
-							break
-						epoch_summary.set_from_dict(summary)
-						print(f'Rank {rank_id} epoch summary: {summary}')
-
-
-			# 	epoch_summary = fc.epochSummary()
-			# 	schema = avro.schema.parse(open("schemas/summary.avsc", "rb").read())
-			# 	for rank_id in range(0, exec_summary.ranks):
-			# 		epochsumfile = "./forma_meta/epochs-"+str(rank_id)+".avro"
-			# 		reader = DataFileReader(open(epochsumfile, "rb"), DatumReader(schema))
-			# 		for rid, summary in enumerate(reader):
-			# 			epoch_summary.set_from_dict(summary)
-			# 			#epoch_summary.print_summary()
-			# 			print(summary)
-			# 		reader.close()
-			fs.forma_aggregate_epoch_stats(exec_summary.ranks)
+			err = fa.forma_aggregate_epoch_files(exec_summary.ranks)
+			if err == 2:
+				fl.forma_error('Window ID discrepancy among files. Make sure you are using well-formatted SST Dumpi output files.')
+				sys.exit(2)
 			fl.forma_print('Statistics per epoch (fence-based synchronization) can be found in file epochs.txt\n')
 		elif action == 'f':
-			fl.forma_print('Option not yet fully supported by current foRMA version.')
+			fl.forma_print('Output not yet fully supported by current foRMA version. Please find intermediate results in file(s) ./forma_meta/epochs-<rank ID>.avro. ')
 			# fl.forma_print('Preparing results...')
 			# fl.forma_print('Fence statistics can be found in file fences.txt.\n')
 		elif action == 'c':
@@ -253,7 +221,7 @@ def main():
 						epoch_summary.set_from_dict(summary)
 						epoch_summary.print_summary()
 					reader.close()
-				fs.forma_aggregate_epoch_stats(exec_summary.ranks)
+				fa.forma_aggregate_epoch_files(exec_summary.ranks)
 
 			with open('fences.txt', 'w') as f:
 				sys.stdout = f # Change the standard output to the file we created.

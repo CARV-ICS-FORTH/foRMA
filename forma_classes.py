@@ -226,38 +226,49 @@ class epochSummary:
 		self.dtbounds[ACC]		= dict["mpi_acc_dtb"]
 
 
+	def __iadd__(self, other):
+
+		if not self.initialized: 
+			self.win_id = other.win_id
+			self.epoch_nr = other.epoch_nr
+			self.initialized = 1
+
+		if self.win_id != other.win_id:
+			fl.forma_logger.warning(f'Discrepancy of # of memory windows among processes. Are you profiling MPI_Win_fence-based executions?')
+			sys.exit(1)
+
+		if self.epoch_nr != other.epoch_nr:
+			fl.forma_logger.warning(f'Discrepancy of # of window epochs among processes. Are you profiling MPI_Win_fence-based executions?')
+			sys.exit(1)
+
+
+		self.callcount_per_opcode += other.callcount_per_opcode
+
+		for opcode in (GET, PUT, ACC):
+			#fs.forma_merge_stats_x4(self.xfer_per_opcode[opcode], other.xfer_per_opcode[opcode])
+			fs.forma_merge_stats_x4(self.dtbounds[opcode], other.dtbounds[opcode])
+			fs.forma_merge_stats_x4(self.opdurations[opcode], other.opdurations[opcode])
+
+		return self
+
+
+	def set_averages(self):
+
+		for opcode in (GET, PUT, ACC):
+			if self.callcount_per_opcode[opcode] != 0:
+				#self.xfer_per_opcode[opcode][AVG] = self.xfer_per_opcode[opcode][AGR] / self.callcount_per_opcode[opcode]
+				self.dtbounds[opcode][AVG] = self.dtbounds[opcode][AGR] / self.callcount_per_opcode[opcode]
+				self.opdurations[opcode][AVG] = self.opdurations[opcode][AGR] / self.callcount_per_opcode[opcode]
+
+
 	def print_summary(self):
 		print(f'----------------------------- Summary for EPOCH {self.epoch_nr} ------------------------------------------\n')
-		# '\n' +
-		# f'-- # of ranks\t\t\t:   {self.ranks}\n' +
-		# f'-- # of memory windows\t\t:   {self.wins}\n' +
-		# f'-- # of MPI_Get calls\t\t:   {self.callcount_per_opcode[GET]}\n' +
-		# f'-- # of MPI_Put calls\t\t:   {self.callcount_per_opcode[PUT]}\n' +
-		# f'-- # of MPI_Accumulate calls\t:   {self.callcount_per_opcode[ACC]}\n' +
-		# f'-- # of MPI_Win_fence calls\t:   {self.callcount_per_opcode[FENCE]}\n' +
-		# '\n')
 
+		opduration_stats = []
+		for i in range(len(self.opdurations)):
+			opduration_stats.append((self.opdurations[i][0:4]).tolist())
+		print('---------------------------- Operation Durations -------------------------------------------\n')
+		fp.forma_print_stats_x4(["MPI_Get", "MPI_Put", "MPI_Accumulate"], opduration_stats)
 
-		# ## if we use forma_print_stats_x6, which is a function written for a previous version 
-		# ## of foRMA, we have to convert numpy arrays to list of lists, for backwards compatibility.
-		# ## this is why variables overalls, winstats, and dtbounds_stats, as well as method tolist()
-		# ## are necessary 
-		# overalls = np.stack((self.exectime, self.rmatime))
-		# print('------------------------------------------------------------------------------------------\n' +
-		# '------------------------ [Operation] Durations (nsec) ------------------------------------\n')
-		# fp.forma_print_stats_x6(["Total exec. time", "Total time in RMA", "MPI_Get", "MPI_Put", "MPI_Accumulate", "MPI_Win_fence"], (np.concatenate((overalls, self.opdurations[0:4]))).tolist())
-
-
-		# winstats = np.stack((self.winsizes, self.xfer_per_win, self.epochs, self.windurations))
-		# print('------------------------------------------------------------------------------------------\n' +
-		# '---------------------------- Memory Windows ----------------------------------------------\n')
-		# fp.forma_print_stats_x4(["Window sizes (B)", "Bytes transferred/win.", "Epochs per win.", "Window durations (nsec)"], winstats.tolist())
-
-		# dtbounds_stats = []
-		# for i in range(len(self.dtbounds)):
-		# 	dtbounds_stats.append((self.dtbounds[i][0:4]).tolist())
-		# print('------------------------------------------------------------------------------------------\n' +
-		# '-------------------------- Data Transfer Bounds ------------------------------------------\n')
-		# fp.forma_print_stats_x4(["MPI_Get", "MPI_Put", "MPI_Accumulate"], dtbounds_stats)
 		
 		return True
