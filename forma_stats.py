@@ -16,7 +16,12 @@
 #	-> using ## to add comments and explanation
 #
 ###################################################################################
-import getopt 
+
+__all__ = ["forma"]
+__author__ = "Lena Kanellou"
+__version__ = "0.1.0"
+
+
 import sys 
 import glob, os
 import re
@@ -29,7 +34,6 @@ import logging
 from pydumpi import DumpiTrace
 
 import forma_trace as ft
-# import forma_prints as fo
 import forma_classes as fc
 import forma_logging as fl
 from forma_constants import *

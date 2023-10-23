@@ -3,7 +3,7 @@
 
 __all__ = ["forma"]
 __author__ = "Lena Kanellou"
-__version__ = "0.1.1"
+__version__ = "0.1.0"
 
 
 
@@ -104,7 +104,7 @@ class FormaSTrace(DumpiTrace):
 		time_diff = wall_time.stop - wall_time.start
 
 		#self.total_exec_time = cpu_time.stop.to_ns()- self.total_exec_time
-	#	self.total_exec_time = wall_time.stop.to_ns()- self.total_exec_time
+		#self.total_exec_time = wall_time.stop.to_ns()- self.total_exec_time
 		#self.trace_summary.setExectime(self.total_exec_time)
 
 		## capture start time of init and end time of finalize in order 

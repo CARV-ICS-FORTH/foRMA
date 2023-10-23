@@ -17,7 +17,7 @@
 ###################################################################################
 
 __author__ = "Lena Kanellou"
-__version__ = "0.1.1"
+__version__ = "0.1.0"
 
 
 """This module defines project-level constants."""

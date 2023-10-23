@@ -18,6 +18,9 @@
 #
 ###################################################################################
 
+__all__ = ["forma"]
+__author__ = "Lena Kanellou"
+__version__ = "0.1.0"
 
 import argparse
 import sys 
@@ -243,42 +246,3 @@ def main():
 
 if __name__ == "__main__":
 	main()
-
-
-
-
-##############################################################################
-## Remnant code from previous versions, kept just in case
-##############################################################################
-
-
-	## main had a getopt way of obtaining command line parameters and options
-
-	# try: 
-	# 	if len(argv) < 4 or len(argv) > 6:
-	# 		fl.forma_print('Input Error! Usage is: ' + str(sys.argv[0]) + ' -d <directory name> -t <timestamp> [ -l <log level> ]')
-	# 		sys.exit(2)
-	# 	else:
-	# 		opts, args = getopt.getopt(argv, 'd:t:l:')
-	# 		for o, a in opts:
-	# 			if o == "-d ": 
-	# 				dirname = a
-	# 			elif o == "-t ":
-	# 				timestamp = a
-	# 			elif o == "-l ":
-	# 				log_level=fl.get_log_level(a)
-	# 				if log_level is None:
-	# 					raise fl.FormaValueError()
-	# 				else:
-	# 					fl.set_forma_loglevel(fl.forma_logger, log_level)
-	# 			else: 
-	# 				assert False, "No such command-line option!"
-	# 				sys.exit(2)
-
-	# except getopt.GetoptError as err:
-	# 	fl.forma_print(f'Exception: {err}. Use  ' + str(sys.argv[0]) + ' -d <directory name> -t <timestamp> [ -l <log level> ] instead')
-	# 	sys.exit()
-
-	# except fl.FormaValueError:
-	# 	fl.forma_print('No such logging level. Must be one of: {critical, error, warn, warning, info, debug}. Continuing with logging level set to INFO.')
-	# 	# sys.exit(2)

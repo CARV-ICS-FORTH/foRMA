@@ -20,7 +20,7 @@
 
 __all__ = ["forma"]
 __author__ = "Lena Kanellou"
-__version__ = "0.1.1"
+__version__ = "0.1.0"
 
 
 import sys 
