@@ -128,15 +128,18 @@ class formaSummary:
 
 	def set_averages(self):
 
+		call_count_sum = 0
+
 		for opcode in (GET, PUT, ACC, FENCE):
 			if self.callcount_per_opcode[opcode] != 0:
 				if opcode != FENCE:
 					self.xfer_per_opcode[opcode][AVG] = self.xfer_per_opcode[opcode][AGR] / self.callcount_per_opcode[opcode]
 					self.dtbounds[opcode][AVG] = self.dtbounds[opcode][AGR] / self.callcount_per_opcode[opcode]
 				self.opdurations[opcode][AVG] = self.opdurations[opcode][AGR] / self.callcount_per_opcode[opcode]
-
+				call_count_sum += self.callcount_per_opcode[opcode]
 		
-		self.xfer_per_win[AVG] = self.xfer_per_win[AGR] / (sum([self.callcount_per_opcode[opcode] for opcode in (GET, PUT, ACC)]))
+		if call_count_sum != 0:
+			self.xfer_per_win[AVG] = self.xfer_per_win[AGR] / call_count_sum
 
 		if self.wins != 0:
 			self.winsizes[AVG] = self.winsizes[AGR] / self.wins ## not sure it's correctly calculated 
@@ -254,11 +257,14 @@ class epochSummary:
 
 	def set_averages(self):
 
+		call_count_sum = 0
+
 		for opcode in (GET, PUT, ACC):
 			if self.callcount_per_opcode[opcode] != 0:
 				#self.xfer_per_opcode[opcode][AVG] = self.xfer_per_opcode[opcode][AGR] / self.callcount_per_opcode[opcode]
 				self.dtbounds[opcode][AVG] = self.dtbounds[opcode][AGR] / self.callcount_per_opcode[opcode]
 				self.opdurations[opcode][AVG] = self.opdurations[opcode][AGR] / self.callcount_per_opcode[opcode]
+				call_count_sum += self.callcount_per_opcode[opcode]
 
 
 	def print_summary(self):
