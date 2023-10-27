@@ -116,11 +116,23 @@ def main():
 	#os.system("exec 2>1")
 
 	total_callbacks = np.sum(exec_summary.callcount_per_opcode)
+	if total_callbacks == 0:
+		fl.forma_error('Zero callbacks detected. Make sure you are using well-formatted SST Dumpi output files.')
+		sys.exit(1)
 	total_rmas = exec_summary.callcount_per_opcode[GET]+exec_summary.callcount_per_opcode[PUT]+exec_summary.callcount_per_opcode[ACC]
+	if total_rmas== 0:
+		fl.forma_error('Zero RMA callbacks detected. Make sure you are profiling traces of an RMA-based application.')
+		sys.exit(1)
 	rma_pc = round((total_rmas/total_callbacks)*100, 2)
 	total_synch = exec_summary.callcount_per_opcode[FENCE]
 	synch_pc = round((total_synch/total_callbacks)*100, 2)
 	total_win = exec_summary.callcount_per_opcode[WIN_CR]+exec_summary.callcount_per_opcode[WIN_FREE]
+	if exec_summary.callcount_per_opcode[WIN_CR] != exec_summary.callcount_per_opcode[WIN_FREE]:
+		fl.forma_error('Discrepancy between MPI_Win_create/MPI_Win_free call counts. Make sure you are using well-formatted SST Dumpi output files.')
+		sys.exit(1)
+	if total_win== 0:
+		fl.forma_error('Zero MPI_Win_create detected. Currently, foRMA only supports MPI_Win_create/MPI_Win_free -based window creation.')
+		sys.exit(1)
 	win_pc = round((total_win/total_callbacks)*100, 2)
 
 	fl.forma_print(f'Handled {total_callbacks} callbacks during the parsing of {exec_summary.ranks} trace files.\n' +
