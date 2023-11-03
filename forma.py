@@ -46,7 +46,7 @@ import forma_aux as fa
 import forma_classes as fc
 import forma_logging as fl
 from forma_constants import *
-
+import forma_config as fg
 
 import avro.schema
 from avro.datafile import DataFileReader, DataFileWriter
@@ -80,6 +80,7 @@ def main():
 	forma_arg_parse.add_argument("-d", "--debug", help="Turns on debug messages and is meant to be used for developing the tool and not when using it to profile traces.",
                     action="store_true")
 	forma_arg_parse.add_argument("-s", "--summary", help="When specified, foRMA only produces a summary of statistics and exits without offering the interactive prompt.", action="store_true")
+	forma_arg_parse.add_argument("-t", "--transfers", help="When specified, foRMA also produces a summary of data transfer bounds statistics while parsing the tracefiles.", action="store_true")
 	forma_arg_parse.add_argument("-a", "--all", help="Produce full analysis broken down per ranks and per windows, output to files epochs.txt, fences.txt, and calls.txt. Equivalent to -c -e -f.", action="store_true")
 	forma_arg_parse.add_argument("-c", "--calls", help="Output time spent in calls (per rank), as well as data transfer bounds, in file calls.txt.", action="store_true")
 	forma_arg_parse.add_argument("-e", "--epochs", help="Produce statistics per epoch (fence-based synchronization), output to file epochs.txt", action="store_true")
@@ -91,6 +92,9 @@ def main():
 	dirname = args.directory
 	timestamp = args.timestamp
 	cmdln_mode = args.summary
+	# dt_summary = args.transfers
+	fg.transfers = args.transfers
+
 
 	if args.debug:
 		log_level = logging.DEBUG

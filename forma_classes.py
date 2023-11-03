@@ -39,6 +39,8 @@ import forma_logging as fl
 import forma_stats as fs
 import forma_prints as fp
 from forma_constants import *
+import forma_config as fg
+
 
 class formaSummary:
 
@@ -181,12 +183,14 @@ class formaSummary:
 		'---------------------------- Memory Windows ----------------------------------------------\n')
 		fp.forma_print_stats_x4(["Window sizes (B)", "Bytes transferred/win.", "Epochs per win.", "Window durations (nsec)"], winstats.tolist())
 
-		# dtbounds_stats = []
-		# for i in range(len(self.dtbounds)):
-		# 	dtbounds_stats.append((self.dtbounds[i][0:4]).tolist())
-		# print('------------------------------------------------------------------------------------------\n' +
-		# '-------------------------- Data Transfer Bounds ------------------------------------------\n')
-		# fp.forma_print_stats_x4(["MPI_Get", "MPI_Put", "MPI_Accumulate"], dtbounds_stats)
+		
+		if fg.transfers == 1:
+			dtbounds_stats = []
+			for i in range(len(self.dtbounds)):
+				dtbounds_stats.append((self.dtbounds[i][0:4]).tolist())
+			print('------------------------------------------------------------------------------------------\n' +
+			'-------------------------- Data Transfer Bounds ------------------------------------------\n')
+			fp.forma_print_stats_x4(["MPI_Get", "MPI_Put", "MPI_Accumulate"], dtbounds_stats)
 		
 		return True
 

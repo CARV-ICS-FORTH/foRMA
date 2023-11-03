@@ -206,6 +206,7 @@ class FormaSTrace(DumpiTrace):
 				epoch_stash = []
 			epoch_stash.append(self.epoch_stats_for_win)
 			self.win_epochs_buffer[win_id] = epoch_stash
+			# fl.forma_logger.debug(f'window data stashed for {win_id}')
 
 	
 
@@ -220,7 +221,8 @@ class FormaSTrace(DumpiTrace):
 		if self.wintb: ## check first if dict is empty, otherwise nasty seg faults
 			if data.win in (self.wintb).keys(): ## if NOT empty and key already exists... 
 				if (self.wintb[data.win] != -1): ## ... check value, in case on_win_free has not yet been called on it
-					fl.forma_logger.warning(f'COLLISION ON WINDOW ID {data.win}')
+					#fl.forma_logger.warning(f'COLLISION ON WINDOW ID {data.win}')
+					fl.forma_error('Window count discrepancy. Does each MPI_Win_create have a matching MPI_Win_free? Make sure you are using well-formatted SST Dumpi output files.')
 					sys.exit(1)
 			#fl.forma_logger.debug('window tb not empty, key does not exist') 
 			## otherwise, not empty, but key does not exist yet
