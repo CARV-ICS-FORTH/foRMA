@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+
 
 ###################################################################################
 # RMA timing profiling using data from SST-Dumpi traces

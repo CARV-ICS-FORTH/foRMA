@@ -1,6 +1,3 @@
-#!/usr/bin/python3
-
-
 __all__ = ["forma"]
 __author__ = "Lena Kanellou"
 __version__ = "0.1.0"
@@ -31,6 +28,7 @@ import forma_logging as fl
 import forma_stats as fs
 import forma_prints as fo
 from forma_constants import *
+import forma_config as fg
 
 import avro.schema
 from avro.datafile import DataFileReader, DataFileWriter
