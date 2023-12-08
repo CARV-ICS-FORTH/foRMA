@@ -206,6 +206,7 @@ class epochSummary:
 		self.opdurations	= np.zeros((3, 4), dtype=float)	# tracking 3 opcodes, 4 statistics for each
 		self.xfer_per_opcode	= np.zeros(3, dtype=float)	# 4 statistics for transfer sizes, tracking 3 opcodes
 		self.dtbounds		= np.zeros((3, 6), dtype=float)	#  -"-
+		self.arrival		= 0		# rank arrival to this fence
 
 	def reset(self):
 		self.initialized	= 0

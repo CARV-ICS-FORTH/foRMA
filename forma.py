@@ -37,8 +37,9 @@ from pydumpi import util
 
 from tabulate import tabulate
 
+import pydumpi as pd
 
-# import forma_trace as ft
+import forma_trace as ft
 import forma_parse as fp
 import forma_stats as fs
 # import forma_prints as fo
@@ -85,6 +86,7 @@ def main():
 	forma_arg_parse.add_argument("-c", "--calls", help="Output time spent in calls (per rank), as well as data transfer bounds, in file calls.txt.", action="store_true")
 	forma_arg_parse.add_argument("-e", "--epochs", help="Produce statistics per epoch (fence-based synchronization), output to file epochs.txt", action="store_true")
 	forma_arg_parse.add_argument("-f", "--fences", help="Produce fence statistics, output to file fences.txt.", action="store_true")
+	forma_arg_parse.add_argument("-m", "--meta", help="Access submenu that works on SST Dumpi meta-data for the trace.", action="store_true")
 
 
 	## ... and get the required parameters from the command-line arguments
@@ -111,6 +113,21 @@ def main():
 		fl.forma_print('No trace files found. Exiting.\n')
 		sys.exit(-1)
 
+
+
+	metafile =  format(str(dirname))+'/'+format(str('dumpi-'+format(str(timestamp))+'.meta'))
+	keyvals = pd.util.read_meta_file(metafile)
+
+	for key, val in keyvals.items():
+		fl.forma_print(f'Key {key} has value {val}')
+
+
+	for rank, tracefile in enumerate(tracefiles):
+		with ft.FormaSTrace(tracefile, rank) as trace:
+			fl.forma_print(f'Now parsing {tracefile}.\n')
+
+			trace.print_footer()
+	#return
 
 
 ################ Stage #0 ends here ########################################
@@ -175,9 +192,13 @@ def main():
 				sys.exit(2)
 			fl.forma_print('Statistics per epoch (fence-based synchronization) can be found in file epochs.txt\n')
 		elif action == 'f':
-			fl.forma_print('Output not yet fully supported by current foRMA version. Please find intermediate results in file(s) ./forma_meta/epochs-<rank ID>.avro. ')
-			# fl.forma_print('Preparing results...')
-			# fl.forma_print('Fence statistics can be found in file fences.txt.\n')
+			# fl.forma_print('Output not yet fully supported by current foRMA version. Please find intermediate results in file(s) ./forma_meta/epochs-<rank ID>.avro. ')
+			fl.forma_print('Preparing results...')
+			err = fa.forma_aggregate_fence_arrivals(exec_summary.ranks)
+			if err == 2:
+				fl.forma_error('Window ID discrepancy among files. Make sure you are using well-formatted SST Dumpi output files.')
+				sys.exit(2)
+			fl.forma_print('Fence statistics can be found in file fences.txt.\n')
 		elif action == 'c':
 			fl.forma_print('Preparing results...')
 			rank_summary = fc.formaSummary()

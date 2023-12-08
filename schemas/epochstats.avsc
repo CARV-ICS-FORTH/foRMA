@@ -4,6 +4,7 @@
  "fields": [
  	{"name": "win_id", "type": "int"},
  	{"name": "epoch_nr", "type": "int"},
+ 	{"name": "arrival", "type": "float"},
  	{"name": "mpi_gets", "type": "int"},
  	{"name": "mpi_puts", "type": "int"},
  	{"name": "mpi_accs", "type": "int"},

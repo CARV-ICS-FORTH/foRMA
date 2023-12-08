@@ -184,6 +184,7 @@ class FormaSTrace(DumpiTrace):
 			# dump to avro file and reset 
 			self.writer.append({"win_id": self.epoch_stats_for_win[win_id].win_id, 
 				"epoch_nr": self.epochcount_per_window[win_id], 
+				"arrival" : wall_time.start.to_ns(),
 				"mpi_gets": int(self.epoch_stats_for_win[win_id].callcount_per_opcode[GET]), 
 				"mpi_puts": int(self.epoch_stats_for_win[win_id].callcount_per_opcode[PUT]), 
 				"mpi_accs": int(self.epoch_stats_for_win[win_id].callcount_per_opcode[ACC]), 
@@ -269,7 +270,7 @@ class FormaSTrace(DumpiTrace):
 			for i in range(len(self.to_print_wins)):
 				self.curr_win_to_file += 1
 				if i in self.to_print_wins:
-					print("foRMA PRINTING STASHED WINDOW DATA!")
+					#print("foRMA PRINTING STASHED WINDOW DATA!")
 					for epochstats in self.win_epochs_buffer[i]:
 						self.writer.append({"win_id": epochstats.win_id, 
 							"epoch_nr": epochstats.epoch_nr, 

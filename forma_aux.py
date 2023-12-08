@@ -158,3 +158,11 @@ def forma_aggregate_epoch_files(rank_nr):
 			prev_win = curr_win
 	sys.stdout = original_stdout # Reset the standard output to its original value
 	return 0
+
+
+
+
+
+def forma_aggregate_fence_arrivals(rank_nr):
+
+	return 0
