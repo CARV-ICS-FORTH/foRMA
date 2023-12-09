@@ -178,6 +178,18 @@ class FormaSTrace(DumpiTrace):
 		# fo.forma_print_stats_x4(["MPI_Get", "MPI_Put", "MPI_Accumulate"], epoch_stats)
 		## debug print end
 
+
+		## fix data transfer bounds for epoch and then for trace summary
+		for opcode in range(3):
+			if self.epoch_stats_for_win[win_id].callcount_per_opcode[opcode] != 0:
+				self.epoch_stats_for_win[win_id].dtbounds[opcode][MIN] = wall_time.stop.to_ns() - self.epoch_stats_for_win[win_id].dtbounds[opcode][MIN]
+				self.epoch_stats_for_win[win_id].dtbounds[opcode][MAX] = wall_time.stop.to_ns() - self.epoch_stats_for_win[win_id].dtbounds[opcode][MAX]
+				self.epoch_stats_for_win[win_id].dtbounds[opcode][AGR] = (self.epoch_stats_for_win[win_id].callcount_per_opcode[opcode]*wall_time.stop.to_ns()) - self.epoch_stats_for_win[win_id].dtbounds[opcode][AGR]
+				#self.epoch_stats_for_win[win_id].dtbounds[opcode][AVG] = self.epoch_stats_for_win[win_id].dtbounds[opcode][AGR] / self.epoch_stats_for_win[win_id].callcount_per_opcode[opcode]
+
+				fs.forma_merge_stats_x4(self.trace_summary.dtbounds[opcode], self.epoch_stats_for_win[win_id].dtbounds[opcode])
+		## 
+# 
 		## ensuring that epoch stats are written to avro file in the order in which 
 		## the windows were created. 
 		if win_id == self.curr_win_to_file:
@@ -195,7 +207,7 @@ class FormaSTrace(DumpiTrace):
 				"mpi_get_dtb": self.epoch_stats_for_win[win_id].dtbounds[GET].tolist(), 
 				"mpi_put_dtb": self.epoch_stats_for_win[win_id].dtbounds[PUT].tolist(), 
 				"mpi_acc_dtb": self.epoch_stats_for_win[win_id].dtbounds[ACC].tolist()})
-			self.epoch_stats_for_win[win_id].reset()
+			#self.epoch_stats_for_win[win_id].reset()
 
 		else:
 			# another window is currently written to avro file -- so, we have to stash 
@@ -206,7 +218,7 @@ class FormaSTrace(DumpiTrace):
 			epoch_stash.append(self.epoch_stats_for_win)
 			self.win_epochs_buffer[win_id] = epoch_stash
 			# fl.forma_logger.debug(f'window data stashed for {win_id}')
-
+		self.epoch_stats_for_win[win_id].reset()
 	
 
 	def on_win_create(self, data, thread, cpu_time, wall_time, perf_info):
@@ -316,6 +328,13 @@ class FormaSTrace(DumpiTrace):
 		self.epoch_stats_for_win[win_id].callcount_per_opcode[GET] += 1
 		fs.forma_streaming_stats_x3(self.epoch_stats_for_win[win_id].opdurations[GET], wall_duration)
 
+		## dt bound for epoch
+		if self.epoch_stats_for_win[win_id].dtbounds[GET][MAX] == 0:
+			self.epoch_stats_for_win[win_id].dtbounds[GET][MAX] = wall_time.start.to_ns()
+		self.epoch_stats_for_win[win_id].dtbounds[GET][MIN] = wall_time.start.to_ns()
+		self.epoch_stats_for_win[win_id].dtbounds[GET][AGR] += wall_time.start.to_ns()
+		##
+
 	def on_put(self, data, thread, cpu_time, wall_time, perf_info):
 		wall_duration = (wall_time.stop - wall_time.start).to_ns()
 		#cpu_duration = (cpu_time.stop - cpu_time.start).to_ns()
@@ -324,11 +343,19 @@ class FormaSTrace(DumpiTrace):
 		fs.forma_streaming_stats_x3(self.trace_summary.opdurations[PUT], wall_duration)
 		fs.forma_streaming_stats_x3(self.trace_summary.xfer_per_opcode[PUT], data.origincount*self.type_sizes[data.origintype])
 
+
 		win_id = self.wintb[data.win]
 		self.data_xfer_per_window[win_id] += data.origincount*self.type_sizes[data.origintype]
 
 		self.epoch_stats_for_win[win_id].callcount_per_opcode[PUT] += 1
 		fs.forma_streaming_stats_x3(self.epoch_stats_for_win[win_id].opdurations[GET], wall_duration)
+
+		## dt bound for epoch
+		if self.epoch_stats_for_win[win_id].dtbounds[PUT][MAX] == 0:
+			self.epoch_stats_for_win[win_id].dtbounds[PUT][MAX] = wall_time.start.to_ns()
+		self.epoch_stats_for_win[win_id].dtbounds[PUT][MIN] = wall_time.start.to_ns()
+		self.epoch_stats_for_win[win_id].dtbounds[PUT][AGR] += wall_time.start.to_ns()
+		##
 
 	def on_accumulate(self, data, thread, cpu_time, wall_time, perf_info):
 		wall_duration = (wall_time.stop - wall_time.start).to_ns()
@@ -343,3 +370,10 @@ class FormaSTrace(DumpiTrace):
 
 		self.epoch_stats_for_win[win_id].callcount_per_opcode[ACC] += 1
 		fs.forma_streaming_stats_x3(self.epoch_stats_for_win[win_id].opdurations[ACC], wall_duration)
+
+		## dt bound for epoch
+		if self.epoch_stats_for_win[win_id].dtbounds[ACC][MAX] == 0:
+			self.epoch_stats_for_win[win_id].dtbounds[ACC][MAX] = wall_time.start.to_ns()
+		self.epoch_stats_for_win[win_id].dtbounds[ACC][MIN] = wall_time.start.to_ns()
+		self.epoch_stats_for_win[win_id].dtbounds[ACC][AGR] += wall_time.start.to_ns()
+		##

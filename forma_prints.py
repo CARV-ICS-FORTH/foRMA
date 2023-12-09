@@ -48,7 +48,8 @@ def forma_print_stats_x6(row_labels, row_data):
 		# fl.forma_print(f'Shapes! row_labels: {np.shape(row_labels)}, row_data: {np.shape(row_data)}')
 		# fl.forma_print(f'len(row_labels): {len(row_labels)}')
 		# fl.forma_print(f'row_labels: {row_labels},\nrow_data: {row_data}')
-		rows = [[row_labels[i]]+row_data[i] for i in range(len(row_labels))]
+		#rows = [[row_labels[i]]+row_data[i] for i in range(len(row_labels))]
+		rows = [[row_labels[i]]+[x/1000.0 for x in row_data[i]] for i in range(len(row_labels))]
 	except TypeError:
 		fl.forma_error('forma_print_stats_x6: check row_labels and row_data types')
 		sys.exit(2)
@@ -58,12 +59,21 @@ def forma_print_stats_x6(row_labels, row_data):
 	return True
 	
 
-def forma_print_stats_x4(row_labels, row_data):
+def forma_print_stats_x4(row_labels, row_data, mode):
+
+	# mode == 0 means all data are nanoseconds and must be converted to usec
+	# mode == 1 means data are mixed: durations, counts, bytes, etc 
 
 	try:
-		rows = [[row_labels[i]]+row_data[i] for i in range(len(row_labels))]
+		if mode == 1:
+			for i in range(len(row_labels)):
+				if "usec" in row_labels[i]:
+					row_data[i] = [x/1000.0 for x in row_data[i]]
+			rows = [[row_labels[i]]+row_data[i] for i in range(len(row_labels))]
+		else: 
+			rows = [[row_labels[i]]+[x/1000.0 for x in row_data[i]] for i in range(len(row_labels))]
 	except TypeError:
-		fl.forma_print('forma_print_stats_x6: check row_labels and row_data types')
+		fl.forma_print('forma_print_stats_x4: check row_labels and row_data types')
 		sys.exit(2)
 
 	print(f'{tabulate(rows, headers=["aggregate", "min", "max", "avg"])}\n')

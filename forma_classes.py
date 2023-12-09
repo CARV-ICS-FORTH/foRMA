@@ -172,23 +172,23 @@ class formaSummary:
 		## are necessary 
 		overalls = np.stack((self.exectime, self.rmatime))
 		print('------------------------------------------------------------------------------------------\n' +
-		'------------------------ [Operation] Durations (nsec) ------------------------------------\n')
+		'------------------------ [Operation] Durations (usec) ------------------------------------\n')
 		fp.forma_print_stats_x6(["Total exec. time", "Total time in RMA", "MPI_Get", "MPI_Put", "MPI_Accumulate", "MPI_Win_fence"], (np.concatenate((overalls, self.opdurations[0:4]))).tolist())
 
 
 		winstats = np.stack((self.winsizes, self.xfer_per_win, self.epochs, self.windurations))
 		print('------------------------------------------------------------------------------------------\n' +
 		'---------------------------- Memory Windows ----------------------------------------------\n')
-		fp.forma_print_stats_x4(["Window sizes (B)", "Bytes transferred/win.", "Epochs per win.", "Window durations (nsec)"], winstats.tolist())
+		fp.forma_print_stats_x4(["Window sizes (B)", "Bytes transferred/win.", "Epochs per win.", "Window durations (usec)"], winstats.tolist(), 1)
 
 		
-		if fg.transfers == 1:
-			dtbounds_stats = []
-			for i in range(len(self.dtbounds)):
-				dtbounds_stats.append((self.dtbounds[i][0:4]).tolist())
-			print('------------------------------------------------------------------------------------------\n' +
-			'-------------------------- Data Transfer Bounds ------------------------------------------\n')
-			fp.forma_print_stats_x4(["MPI_Get", "MPI_Put", "MPI_Accumulate"], dtbounds_stats)
+		# if fg.transfers == 1:
+		dtbounds_stats = []
+		for i in range(len(self.dtbounds)):
+			dtbounds_stats.append((self.dtbounds[i][0:4]).tolist())
+		print('------------------------------------------------------------------------------------------\n' +
+		'-------------------------- Data Transfer Bounds ------------------------------------------\n')
+		fp.forma_print_stats_x4(["MPI_Get", "MPI_Put", "MPI_Accumulate"], dtbounds_stats, 0)
 		
 		return True
 
@@ -277,7 +277,7 @@ class epochSummary:
 		for i in range(len(self.opdurations)):
 			opduration_stats.append((self.opdurations[i][0:4]).tolist())
 		print('---------------------------- Operation Durations -------------------------------------------\n')
-		fp.forma_print_stats_x4(["MPI_Get", "MPI_Put", "MPI_Accumulate"], opduration_stats)
+		fp.forma_print_stats_x4(["MPI_Get", "MPI_Put", "MPI_Accumulate"], opduration_stats, 0)
 
 		
 		return True
