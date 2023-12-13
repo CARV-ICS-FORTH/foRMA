@@ -78,7 +78,7 @@ class FormaSTrace(DumpiTrace):
 		if not os.path.exists('./forma_meta/'):
 			os.mkdir('./forma_meta/')
 
-		schema = avro.schema.parse(open("schemas/epochstats.avsc", "rb").read())
+		schema = avro.schema.parse(open("../schemas/epochstats.avsc", "rb").read())
 		epochfilename = "./forma_meta/epochs-"+str(rank)+".avro"
 		self.writer = DataFileWriter(open(epochfilename, "wb"), DatumWriter(), schema)
 

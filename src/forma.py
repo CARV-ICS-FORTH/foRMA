@@ -202,7 +202,7 @@ def main():
 		elif action == 'c':
 			fl.forma_print('Preparing results...')
 			rank_summary = fc.formaSummary()
-			schema = avro.schema.parse(open("schemas/summary.avsc", "rb").read())
+			schema = avro.schema.parse(open("../schemas/summary.avsc", "rb").read())
 			reader = DataFileReader(open("rank_summaries.avro", "rb"), DatumReader(schema))
 			original_stdout = sys.stdout # Save a reference to the original standard output
 			with open('calls.txt', 'w') as f:
@@ -227,7 +227,7 @@ def main():
 			    continue
 			fl.forma_print(f'Summary for rank {rank_id}\n')
 			rank_summary = fc.formaSummary()
-			schema = avro.schema.parse(open("schemas/summary.avsc", "rb").read())
+			schema = avro.schema.parse(open("../schemas/summary.avsc", "rb").read())
 			reader = DataFileReader(open("rank_summaries.avro", "rb"), DatumReader(schema))
 			for rid, summary in enumerate(reader):
 				if rid == rank_id:
@@ -240,7 +240,7 @@ def main():
 			original_stdout = sys.stdout # Save a reference to the original standard output
 
 			rank_summary = fc.formaSummary()
-			schema = avro.schema.parse(open("schemas/summary.avsc", "rb").read())
+			schema = avro.schema.parse(open("../schemas/summary.avsc", "rb").read())
 			reader = DataFileReader(open("rank_summaries.avro", "rb"), DatumReader(schema))
 			with open('calls.txt', 'w') as f:
 				sys.stdout = f # Change the standard output to the file we created.
@@ -253,7 +253,7 @@ def main():
 				sys.stdout = f # Change the standard output to the file we created.
 
 				epoch_summary = fc.epochSummary()
-				schema = avro.schema.parse(open("schemas/summary.avsc", "rb").read())
+				schema = avro.schema.parse(open("../schemas/summary.avsc", "rb").read())
 				for rank_id in range(0, exec_summary.ranks):
 					epochsumfile = "./forma_meta/epochs-"+str(rank_id)+".avro"
 					reader = DataFileReader(open(epochsumfile, "rb"), DatumReader(schema))
