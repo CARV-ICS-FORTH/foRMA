@@ -1,4 +1,4 @@
-![](forma-banner.png)
+![](art/forma-banner.png)
 
 # What is _foRMA_
 
