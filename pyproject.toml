@@ -1,0 +1,19 @@
+[project]
+name = "foRMA"
+version = "0.1.0"
+authors = [
+  { name="Lena Kanellou", email="kanellou@ics.forth.gr" },
+]
+description = "MPI RMA profiling using data from SST Dumpi traces"
+readme = "README.md"
+requires-python = ">=3"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+Homepage = "https://github.com/CARV-ICS-FORTH/foRMA/"
+Issues = "https://github.com/CARV-ICS-FORTH/foRMA/issues"
+
