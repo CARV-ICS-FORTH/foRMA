@@ -82,10 +82,10 @@ def main():
                     action="store_true")
 	forma_arg_parse.add_argument("-s", "--summary", help="When specified, foRMA only produces a summary of statistics and exits without offering the interactive prompt.", action="store_true")
 	forma_arg_parse.add_argument("-t", "--transfers", help="When specified, foRMA also produces a summary of data transfer bounds statistics while parsing the tracefiles.", action="store_true")
-	forma_arg_parse.add_argument("-a", "--all", help="Produce full analysis broken down per ranks and per windows, output to files epochs.txt, fences.txt, and calls.txt. Equivalent to -c -e -f.", action="store_true")
-	forma_arg_parse.add_argument("-c", "--calls", help="Output time spent in calls (per rank), as well as data transfer bounds, in file calls.txt.", action="store_true")
-	forma_arg_parse.add_argument("-e", "--epochs", help="Produce statistics per epoch (fence-based synchronization), output to file epochs.txt", action="store_true")
-	forma_arg_parse.add_argument("-f", "--fences", help="Produce fence statistics, output to file fences.txt.", action="store_true")
+	forma_arg_parse.add_argument("-a", "--all", help="Produce full analysis broken down per ranks and per windows, output to files epochs.txt, fences.txt, and calls.txt in directory forma_out/. Equivalent to -c -e -f.", action="store_true")
+	forma_arg_parse.add_argument("-c", "--calls", help="Output time spent in calls (per rank), as well as data transfer bounds, in file forma_out/calls.txt.", action="store_true")
+	forma_arg_parse.add_argument("-e", "--epochs", help="Produce statistics per epoch (fence-based synchronization), output to file forma_out/epochs.txt", action="store_true")
+	forma_arg_parse.add_argument("-f", "--fences", help="Produce fence statistics, output to file forma_out/fences.txt.", action="store_true")
 	forma_arg_parse.add_argument("-m", "--meta", help="Access submenu that works on SST Dumpi meta-data for the trace.", action="store_true")
 
 
@@ -163,6 +163,9 @@ def main():
 
 	exec_summary.print_summary()
 
+	if not os.path.exists('./forma_out/'):
+		os.mkdir('./forma_out/')
+
 
 
 ################ Stage-independent #########################################
@@ -190,29 +193,29 @@ def main():
 			if err == 2:
 				fl.forma_error('Window ID discrepancy among files. Make sure you are using well-formatted SST Dumpi output files.')
 				sys.exit(2)
-			fl.forma_print('Statistics per epoch (fence-based synchronization) can be found in file epochs.txt\n')
+			fl.forma_print('Statistics per epoch (fence-based synchronization) can be found in file forma_out/epochs.txt\n')
 		elif action == 'f':
-			# fl.forma_print('Output not yet fully supported by current foRMA version. Please find intermediate results in file(s) ./forma_meta/epochs-<rank ID>.avro. ')
-			fl.forma_print('Preparing results...')
-			err = fa.forma_aggregate_fence_arrivals(exec_summary.ranks)
-			if err == 2:
-				fl.forma_error('Window ID discrepancy among files. Make sure you are using well-formatted SST Dumpi output files.')
-				sys.exit(2)
-			fl.forma_print('Fence statistics can be found in file fences.txt.\n')
+			fl.forma_print('Output not yet fully supported by current foRMA version. Please find intermediate results in file(s) ./forma_meta/epochs-<rank ID>.avro. ')
+			# fl.forma_print('Preparing results...')
+			# err = fa.forma_aggregate_fence_arrivals(exec_summary.ranks)
+			# if err == 2:
+			# 	fl.forma_error('Window ID discrepancy among files. Make sure you are using well-formatted SST Dumpi output files.')
+			# 	sys.exit(2)
+			# fl.forma_print('Fence statistics can be found in file forma_out/fences.txt.\n')
 		elif action == 'c':
 			fl.forma_print('Preparing results...')
 			rank_summary = fc.formaSummary()
 			schema = avro.schema.parse(open("../schemas/summary.avsc", "rb").read())
-			reader = DataFileReader(open("rank_summaries.avro", "rb"), DatumReader(schema))
+			reader = DataFileReader(open("forma_meta/rank_summaries.avro", "rb"), DatumReader(schema))
 			original_stdout = sys.stdout # Save a reference to the original standard output
-			with open('calls.txt', 'w') as f:
+			with open('forma_out/calls.txt', 'w') as f:
 				sys.stdout = f # Change the standard output to the file we created.
 				for rid, summary in enumerate(reader):
 					rank_summary.set_from_dict(summary)
 					rank_summary.print_summary()
 				reader.close()
 			sys.stdout = original_stdout # Reset the standard output to its original value
-			fl.forma_print('Time spent in calls (per rank), as well as data transfer bounds, can be found in file calls.txt\n')
+			fl.forma_print('Time spent in calls (per rank), as well as data transfer bounds, can be found in file forma_out/calls.txt\n')
 		elif action == 'r':
 			try:
 				rank_id = int(input(f'Please select rank ID [0 - {exec_summary.ranks-1}]: '))
@@ -228,7 +231,7 @@ def main():
 			fl.forma_print(f'Summary for rank {rank_id}\n')
 			rank_summary = fc.formaSummary()
 			schema = avro.schema.parse(open("../schemas/summary.avsc", "rb").read())
-			reader = DataFileReader(open("rank_summaries.avro", "rb"), DatumReader(schema))
+			reader = DataFileReader(open("forma_meta/rank_summaries.avro", "rb"), DatumReader(schema))
 			for rid, summary in enumerate(reader):
 				if rid == rank_id:
 					rank_summary.set_from_dict(summary)
@@ -241,15 +244,15 @@ def main():
 
 			rank_summary = fc.formaSummary()
 			schema = avro.schema.parse(open("../schemas/summary.avsc", "rb").read())
-			reader = DataFileReader(open("rank_summaries.avro", "rb"), DatumReader(schema))
-			with open('calls.txt', 'w') as f:
+			reader = DataFileReader(open("forma_meta/rank_summaries.avro", "rb"), DatumReader(schema))
+			with open('forma_out/calls.txt', 'w') as f:
 				sys.stdout = f # Change the standard output to the file we created.
 				for rid, summary in enumerate(reader):
 					rank_summary.set_from_dict(summary)
 					rank_summary.print_summary()
 				reader.close()
 
-			with open('epochs.txt', 'w') as f:
+			with open('forma_out/epochs.txt', 'w') as f:
 				sys.stdout = f # Change the standard output to the file we created.
 
 				epoch_summary = fc.epochSummary()
@@ -263,12 +266,12 @@ def main():
 					reader.close()
 				fa.forma_aggregate_epoch_files(exec_summary.ranks)
 
-			with open('fences.txt', 'w') as f:
+			with open('forma_out/fences.txt', 'w') as f:
 				sys.stdout = f # Change the standard output to the file we created.
 				
 			sys.stdout = original_stdout # Reset the standard output to its original value
 			#fl.forma_print('Full analysis broken down per ranks and per windows can be found in files epochs.txt, fences.txt, and calls.txt\n')
-			fl.forma_print('Full analysis broken down per ranks and per windows can be found in files epochs.txt and calls.txt\n')
+			fl.forma_print('Full analysis broken down per ranks and per windows can be found in files epochs.txt and calls.txt in directory forma_out/\n')
 		elif action == 'p':
 			pass
 		else:

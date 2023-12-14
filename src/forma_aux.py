@@ -88,7 +88,7 @@ def check_filepaths(dirname, timestamp):
 def forma_aggregate_epoch_files(rank_nr):
 	epoch_count = -1
 	epoch_summary = fc.epochSummary()
-	schema = avro.schema.parse(open("schemas/summary.avsc", "rb").read())
+	schema = avro.schema.parse(open("../schemas/summary.avsc", "rb").read())
 	epochfiles = []
 	readers = []
 	offsets = []
@@ -119,7 +119,7 @@ def forma_aggregate_epoch_files(rank_nr):
 	rank_win = 0
 	prev_rank_win = 0
 	original_stdout = sys.stdout # Save a reference to the original standard output
-	with open('epochs.txt', 'w') as f:
+	with open('forma_out/epochs.txt', 'w') as f:
 		sys.stdout = f # Change the standard output to the file we created.
 		aggregate_epoch_summary = fc.epochSummary()
 		while(keep_reading):
