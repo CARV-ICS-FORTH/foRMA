@@ -11,13 +11,13 @@ setuptools.setup(
     description="A python package to profiling MPI RMA operations, designed to process execution traces produced by SST Dumpi.",
     url="https://github.com/CARV-ICS-FORTH/foRMA/",
     packages=setuptools.find_packages(),
-    #entry_points={"console_scripts": ["CITE-seq-Count = cite_seq_count.__main__:main"]},
+    entry_points={'console_scripts': ['forma = src.forma:main"]},
     classifiers=(
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: BSD-3-Clause",
         "Operating System :: OS Independent",
     ),
-	package_data={'forma': ['schemas/epochstats.avsc', 'schemas/summary.avsc']},
+    package_data={'forma': ['schemas/epochstats.avsc', 'schemas/summary.avsc']},
     install_requires=[
         #"argparse",
         #"sys",

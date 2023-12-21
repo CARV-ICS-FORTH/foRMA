@@ -13,7 +13,8 @@ local_forma_archive_filename = f"forma_archive_{version}.tar.gz"
 sources = [{
     'filename': local_forma_archive_filename,
     'git_config': {
-        'url': 'git@gitlab.jsc.fz-juelich.de:deep-sea/wp3/software/forma.git',
+#        'url': 'git@gitlab.jsc.fz-juelich.de:deep-sea/wp3/software/forma.git',
+        'url': 'git@gitlab.jsc.fz-juelich.de:deep-sea/wp3/software',
         'repo_name': 'forma',
         'recursive': True,
         'tag': 'v'+version,
@@ -37,9 +38,9 @@ options = {'modulename': 'forma'}
 
 # sources = ['forma-streaming.tar.gz']
 
-# sanity_check_paths = {
-#    'dirs': [],
-#    'files': []
-# }
+sanity_check_paths = {
+   'dirs': ['src/', 'schemas/'],
+   'files': ['src/*', 'schemas/*']
+}
 
 moduleclass = 'tools'
