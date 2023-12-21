@@ -27,11 +27,11 @@ dependencies = [
     # ('forma', '0.1.0'),
 ]
 
-
+use_pip_for_deps = True
 use_pip = True
 
 options = {'modulename': 'forma'}
 
-sources = ['forma-streaming.tar.gz']
+# sources = ['forma-streaming.tar.gz']
 
 moduleclass = 'tools'
