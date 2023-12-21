@@ -3,19 +3,21 @@
 easyblock = 'PythonPackage'
 
 name = 'foRMA'
-version = '0.1.0'
+version = '0.1.1'
 homepage = 'https://github.com/CARV-ICS-FORTH/foRMA'
 description = "Initial test for easybuild foRMA"
 
 toolchain = {'name': 'foss', 'version': '2022a'}
 
+local_forma_archive_filename = f"forma_archive_{version}.tar.gz"
 sources = [{
-    'filename': 'forma_archive.tar.gz',
+    'filename': local_forma_archive_filename,
     'git_config': {
-        'url': 'https://github.com/CARV-ICS-FORTH/foRMA',
+        'url': 'git@gitlab.jsc.fz-juelich.de:deep-sea/wp3/software/forma.git',
         'repo_name': 'forma',
         'recursive': True,
-        'keep_git_dir': True,
+        'tag': 'v'+version,
+        'keep_git_dir': True
     },
 }]
 
@@ -29,9 +31,15 @@ dependencies = [
 
 use_pip_for_deps = True
 use_pip = True
+sanity_pip_check = True
 
 options = {'modulename': 'forma'}
 
 # sources = ['forma-streaming.tar.gz']
+
+# sanity_check_paths = {
+#    'dirs': [],
+#    'files': []
+# }
 
 moduleclass = 'tools'
