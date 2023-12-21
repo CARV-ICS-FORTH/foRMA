@@ -1,5 +1,5 @@
-#Copyright 2022 Computer Architecture and VLSI Systems (CARV) Laboratory
-#SPDX-License-Identifier:  	BSD-3-Clause
+# Copyright 2022 Computer Architecture and VLSI Systems (CARV) Laboratory
+# SPDX-License-Identifier:  	BSD-3-Clause
 easyblock = 'PythonPackage'
 
 name = 'foRMA'
@@ -7,7 +7,7 @@ version = '0.1.0'
 homepage = 'https://github.com/CARV-ICS-FORTH/foRMA'
 description = "Initial test for easybuild foRMA"
 
-toolchain = {'name': 'foss', 'version' : '2022a'}
+toolchain = {'name': 'foss', 'version': '2022a'}
 
 sources = [{
     'filename': 'forma_archive.tar.gz',
@@ -20,11 +20,11 @@ sources = [{
 }]
 
 dependencies = [
-#    ('Stages', '2003'),
-#    ('GCCcore', '.11.3.0'),
+    # ('Stages', '2003'),
+    # ('GCCcore', '.11.3.0'),
     ('Python', '3.10.4'),
-#    ('numpy', ''),
-#    ('forma', '0.1.0'),
+    # ('numpy', ''),
+    # ('forma', '0.1.0'),
 ]
 
 
@@ -35,4 +35,3 @@ options = {'modulename': 'forma'}
 sources = ['forma-streaming.tar.gz']
 
 moduleclass = 'tools'
-
