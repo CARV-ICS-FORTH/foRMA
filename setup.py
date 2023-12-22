@@ -2,7 +2,6 @@ import setuptools
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
-
 setuptools.setup(
     name="foRMA",
     version="0.1.0",
@@ -10,15 +9,17 @@ setuptools.setup(
     author_email="kanellou@ics.forth.gr",
     description="A python package to profiling MPI RMA operations, designed to process execution traces produced by SST Dumpi.",
     url="https://github.com/CARV-ICS-FORTH/foRMA/",
-    packages=setuptools.find_packages(),
-    entry_points={'console_scripts': ['forma = src.forma:main"]},
-    classifiers=(
+	packages=setuptools.find_namespace_packages(where='src'),
+    package_dir={"": "src"},
+    entry_points={'console_scripts': ['forma = foRMA:main']},
+    classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: BSD-3-Clause",
         "Operating System :: OS Independent",
-    ),
+    ],
     package_data={'forma': ['schemas/epochstats.avsc', 'schemas/summary.avsc']},
-    install_requires=[
+	include_package_data=True,
+install_requires=[
         #"argparse",
         #"sys",
         #"glob",
