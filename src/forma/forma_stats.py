@@ -33,10 +33,10 @@ import logging
 
 from pydumpi import DumpiTrace
 
-import forma_trace as ft
-import forma_classes as fc
-import forma_logging as fl
-from forma_constants import *
+import forma.forma_trace as ft
+import forma.forma_classes as fc
+import forma.forma_logging as fl
+from .forma_constants import *
 
 
 """ The following function should be used to update 

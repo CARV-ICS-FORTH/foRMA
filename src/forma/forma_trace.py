@@ -23,12 +23,12 @@ from pydumpi import dtypes
 from pydumpi import DumpiTrace
 
 
-import forma_classes as fc
-import forma_logging as fl
-import forma_stats as fs
-import forma_prints as fo
-from forma_constants import *
-import forma_config as fg
+import forma.forma_classes as fc
+import forma.forma_logging as fl
+import forma.forma_stats as fs
+import forma.forma_prints as fo
+from .forma_constants import *
+import forma.forma_config as fg
 
 import avro.schema
 from avro.datafile import DataFileReader, DataFileWriter

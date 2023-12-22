@@ -33,11 +33,11 @@ import logging
 from pydumpi import DumpiTrace
 from pydumpi import util
 
-import forma_logging as fl
-import forma_stats as fs
-import forma_prints as fp
-from forma_constants import *
-import forma_config as fg
+import forma.forma_logging as fl
+import forma.forma_stats as fs
+import forma.forma_prints as fp
+from .forma_constants import *
+import forma.forma_config as fg
 
 
 class formaSummary:

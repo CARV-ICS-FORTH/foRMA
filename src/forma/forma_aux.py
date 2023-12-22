@@ -34,8 +34,8 @@ from pydumpi import DumpiTrace
 from pydumpi import util
 
 
-import forma_logging as fl
-import forma_classes as fc
+import forma.forma_logging as fl
+import forma.forma_classes as fc
 
 import avro.schema
 from avro.datafile import DataFileReader, DataFileWriter

@@ -37,11 +37,11 @@ import numpy as np
 
 from pympler import asizeof
 
-import forma_trace as ft
-import forma_aux as fa
-import forma_classes as fc
-import forma_logging as fl
-from forma_constants import *
+import forma.forma_trace as ft
+import forma.forma_aux as fa
+import forma.forma_classes as fc
+import forma.forma_logging as fl
+from .forma_constants import *
 
 
 import avro.schema

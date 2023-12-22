@@ -30,8 +30,8 @@ import numpy as np
 
 from pydumpi import DumpiTrace
 
-import forma_trace as ft
-import forma_logging as fl
+import forma.forma_trace as ft
+import forma.forma_logging as fl
 
 from tabulate import tabulate
 

@@ -3,15 +3,16 @@ import setuptools
 with open("README.md", "r") as fh:
     long_description = fh.read()
 setuptools.setup(
-    name="foRMA",
+    name="forma",
     version="0.1.0",
     author="Lena Kanellou",
     author_email="kanellou@ics.forth.gr",
     description="A python package to profiling MPI RMA operations, designed to process execution traces produced by SST Dumpi.",
     url="https://github.com/CARV-ICS-FORTH/foRMA/",
-	packages=setuptools.find_namespace_packages(where='src'),
+    packages=setuptools.find_namespace_packages(where='src'),
+    # packages=['forma'],
     package_dir={"": "src"},
-    entry_points={'console_scripts': ['forma = foRMA:main']},
+    entry_points={'console_scripts': ['forma = forma.forma:main']},
     classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: BSD-3-Clause",
@@ -19,7 +20,7 @@ setuptools.setup(
     ],
     package_data={'forma': ['schemas/epochstats.avsc', 'schemas/summary.avsc']},
 	include_package_data=True,
-install_requires=[
+    install_requires=[
         #"argparse",
         #"sys",
         #"glob",
@@ -28,11 +29,11 @@ install_requires=[
         "numpy",
         #"logging",
         "pydumpi",
-		"tabulate",
-		"avro",
-		#"contextlib",
-		"pympler",
-	#	"ctypes",
+	"tabulate",
+	"avro",
+	#"contextlib",
+	"pympler",
+	#"ctypes",
     ],
     python_requires=">=3",
 )

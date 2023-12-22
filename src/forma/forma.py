@@ -39,15 +39,15 @@ from tabulate import tabulate
 
 import pydumpi as pd
 
-import forma_trace as ft
-import forma_parse as fp
-import forma_stats as fs
-# import forma_prints as fo
-import forma_aux as fa
-import forma_classes as fc
-import forma_logging as fl
-from forma_constants import *
-import forma_config as fg
+import forma.forma_trace as ft
+import forma.forma_parse as fp
+import forma.forma_stats as fs
+# import forma.forma_prints as fo
+import forma.forma_aux as fa
+import forma.forma_classes as fc
+import forma.forma_logging as fl
+from .forma_constants import *
+import forma.forma_config as fg
 
 import avro.schema
 from avro.datafile import DataFileReader, DataFileWriter
