@@ -20,6 +20,7 @@ sources = [{
         'keep_git_dir': True
     },
 }]
+checksums = ['435f8776b39d033688cae7ce66a800f2cbb6f9165f6db002c80ad7db538381ad']
 
 dependencies = [
     # ('Stages', '2003'),
