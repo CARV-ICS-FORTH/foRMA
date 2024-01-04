@@ -1,0 +1,23 @@
+default:
+  tags: [deep-sea, jacamar, shell]
+
+
+stages: [prep, staging]
+
+create_tarball:
+  stage: prep
+  script:
+    - mkdir -p -m 777 /p/project/deepsea/ci-stage-sources/f/forma/
+    - tar -cvz --exclude=.git* -f /p/project/deepsea/ci-stage-sources/f/forma/${CI_PIPELINE_ID}.tar.gz .
+
+trigger-downstream:
+  stage: staging
+  variables:
+    BUILD_INVERSE_DEPENDENCIES: 'FALSE'
+    EB_FILE_CURRENT: "forma-0.1.2-foss2022a.eb"
+    SRC: '${CI_PIPELINE_ID}.tar.gz'
+    SRC_URLS: 'file:///p/project/deepsea/ci-stage-sources/f/forma'
+  trigger:
+    project: deep-sea/wp3/software/easybuild-repository-deep-sea
+    strategy: depend
+    branch: ci-2023-dev
