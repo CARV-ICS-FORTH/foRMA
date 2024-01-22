@@ -3,7 +3,7 @@
 easyblock = 'PythonPackage'
 
 name = 'forma'
-version = '0.1.5'
+version = '0.1.6'
 homepage = 'https://github.com/CARV-ICS-FORTH/foRMA'
 description = "Initial test for easybuild foRMA"
 

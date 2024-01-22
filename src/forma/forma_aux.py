@@ -41,6 +41,10 @@ import avro.schema
 from avro.datafile import DataFileReader, DataFileWriter
 from avro.io import DatumReader, DatumWriter
 
+import importlib.resources
+
+
+
 def check_filepaths(dirname, timestamp):
 
 	try:
@@ -88,7 +92,10 @@ def check_filepaths(dirname, timestamp):
 def forma_aggregate_epoch_files(rank_nr):
 	epoch_count = -1
 	epoch_summary = fc.epochSummary()
-	schema = avro.schema.parse(open("../schemas/summary.avsc", "rb").read())
+	# schema = avro.schema.parse(open("../schemas/summary.avsc", "rb").read())
+	resource_string = importlib.resources.files('forma.schemas').joinpath('summary.avsc')
+	with importlib.resources.as_file(resource_string) as resource:
+		schema = avro.schema.parse(open(resource, "rb").read())
 	epochfiles = []
 	readers = []
 	offsets = []
