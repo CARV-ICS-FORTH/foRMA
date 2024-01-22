@@ -36,7 +36,7 @@ from pydumpi import util
 import forma.forma_logging as fl
 import forma.forma_stats as fs
 import forma.forma_prints as fp
-from .forma_constants import *
+from forma.forma_constants import *
 import forma.forma_config as fg
 
 

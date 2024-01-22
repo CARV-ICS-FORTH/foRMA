@@ -36,7 +36,7 @@ from pydumpi import DumpiTrace
 import forma.forma_trace as ft
 import forma.forma_classes as fc
 import forma.forma_logging as fl
-from .forma_constants import *
+from forma.forma_constants import *
 
 
 """ The following function should be used to update 

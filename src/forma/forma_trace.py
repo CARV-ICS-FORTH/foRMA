@@ -27,12 +27,14 @@ import forma.forma_classes as fc
 import forma.forma_logging as fl
 import forma.forma_stats as fs
 import forma.forma_prints as fo
-from .forma_constants import *
+from forma.forma_constants import *
 import forma.forma_config as fg
 
 import avro.schema
 from avro.datafile import DataFileReader, DataFileWriter
 from avro.io import DatumReader, DatumWriter
+
+import importlib.resources
 
 
 ## foRMA in-memory (IM) trace, one of the versions of the callback 
@@ -78,7 +80,11 @@ class FormaSTrace(DumpiTrace):
 		if not os.path.exists('./forma_meta/'):
 			os.mkdir('./forma_meta/')
 
-		schema = avro.schema.parse(open("../schemas/epochstats.avsc", "rb").read())
+		#resource_string = importlib.resources.path("forma", 'schemas/epochstats.avsc')
+		# schema = avro.schema.parse(open("schemas/epochstats.avsc", "rb").read())
+		resource_string = importlib.resources.files('forma.schemas').joinpath('epochstats.avsc')
+		with importlib.resources.as_file(resource_string) as resource:
+			schema = avro.schema.parse(open(resource, "rb").read())
 		epochfilename = "./forma_meta/epochs-"+str(rank)+".avro"
 		self.writer = DataFileWriter(open(epochfilename, "wb"), DatumWriter(), schema)
 

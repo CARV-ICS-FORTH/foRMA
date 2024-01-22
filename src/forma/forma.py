@@ -46,7 +46,7 @@ import forma.forma_stats as fs
 import forma.forma_aux as fa
 import forma.forma_classes as fc
 import forma.forma_logging as fl
-from .forma_constants import *
+from forma.forma_constants import *
 import forma.forma_config as fg
 
 import avro.schema

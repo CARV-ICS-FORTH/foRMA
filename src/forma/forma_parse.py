@@ -41,14 +41,14 @@ import forma.forma_trace as ft
 import forma.forma_aux as fa
 import forma.forma_classes as fc
 import forma.forma_logging as fl
-from .forma_constants import *
+from forma.forma_constants import *
 
 
 import avro.schema
 from avro.datafile import DataFileReader, DataFileWriter
 from avro.io import DatumReader, DatumWriter
 
-
+import importlib.resources
 
 def forma_parse_traces(tracefiles):
 
@@ -61,7 +61,10 @@ def forma_parse_traces(tracefiles):
 
 	fl.forma_logger.debug('Inside forma parse traces.')
 
-	schema = avro.schema.parse(open("../schemas/summary.avsc", "rb").read())
+	# schema = avro.schema.parse(open("schemas/summary.avsc", "rb").read())
+	resource_string = importlib.resources.files('forma.schemas').joinpath('summary.avsc')
+	with importlib.resources.as_file(resource_string) as resource:
+		schema = avro.schema.parse(open(resource, "rb").read())
 	writer = DataFileWriter(open("forma_meta/rank_summaries.avro", "wb"), DatumWriter(), schema)
 
 	for rank, tracefile in enumerate(tracefiles):
