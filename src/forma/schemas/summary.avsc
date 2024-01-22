@@ -1,0 +1,25 @@
+{"namespace": "summaries.avro",
+ "type": "record",
+ "name": "rank_summary",
+ "fields": [
+  	{"name": "rank_nr", "type": "int"},
+ 	{"name": "wins", "type": "int"},
+ 	{"name": "mpi_gets", "type": "int"},
+ 	{"name": "mpi_puts", "type": "int"},
+ 	{"name": "mpi_accs", "type": "int"},
+ 	{"name": "mpi_fences", "type": "int"},
+ 	{"name": "total_exec_times", "type": {"type": "array", "items": "float"}},
+ 	{"name": "total_rma_times", "type": {"type": "array", "items": "float"}},
+ 	{"name": "mpi_get_times", "type": {"type": "array", "items": "float"}},
+ 	{"name": "mpi_put_times", "type": {"type": "array", "items": "float"}},
+ 	{"name": "mpi_acc_times", "type": {"type": "array", "items": "float"}},
+ 	{"name": "mpi_fence_times", "type": {"type": "array", "items": "float"}},
+ 	{"name": "window_sizes", "type": {"type": "array", "items": "float"}},
+ 	{"name": "tf_per_win", "type": {"type": "array", "items": "float"}},
+ 	{"name": "epochs_per_win", "type": {"type": "array", "items": "float"}},
+ 	{"name": "win_durations", "type": {"type": "array", "items": "float"}},
+ 	{"name": "mpi_get_dtb", "type": {"type": "array", "items": "float"}},
+ 	{"name": "mpi_put_dtb", "type": {"type": "array", "items": "float"}},
+ 	{"name": "mpi_acc_dtb", "type": {"type": "array", "items": "float"}}
+ ]
+}
