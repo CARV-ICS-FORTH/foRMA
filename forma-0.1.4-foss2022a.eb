@@ -1,0 +1,43 @@
+# Copyright 2022 Computer Architecture and VLSI Systems (CARV) Laboratory
+# SPDX-License-Identifier:  	BSD-3-Clause
+easyblock = 'PythonPackage'
+
+name = 'forma'
+version = '0.1.4'
+homepage = 'https://github.com/CARV-ICS-FORTH/foRMA'
+description = "Initial test for easybuild foRMA"
+
+toolchain = {'name': 'foss', 'version': '2022a'}
+
+local_forma_archive_filename = f"forma_archive_{version}.tar.gz"
+sources = [{
+    'filename': local_forma_archive_filename,
+    'git_config': {
+        'url': 'git@gitlab.jsc.fz-juelich.de:deep-sea/wp3/software',
+        'repo_name': 'forma',
+        'recursive': True,
+        'tag': 'v' + version,
+        'keep_git_dir': True
+    },
+}]
+
+dependencies = [
+    # ('Stages', '2003'),
+    # ('GCCcore', '.11.3.0'),
+    ('Python', '3.10.4'),
+    # ('numpy', ''),
+    # ('forma', '0.1.0'),
+]
+
+use_pip_for_deps = True
+use_pip = True
+# sanity_pip_check = True
+
+options = {'modulename': 'forma'}
+
+# sanity_check_paths = {
+#    'dirs': ['src/', 'schemas/'],
+#    'files': ['src/*', 'schemas/*']
+# }
+
+moduleclass = 'tools'

@@ -4,7 +4,7 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 setuptools.setup(
     name="forma",
-    version="0.1.0",
+    version="0.1.4",
     author="Lena Kanellou",
     author_email="kanellou@ics.forth.gr",
     description="A python package to profiling MPI RMA operations, designed to process execution traces produced by SST Dumpi.",
