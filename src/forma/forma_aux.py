@@ -136,6 +136,7 @@ def forma_aggregate_epoch_files(rank_nr):
 				try:
 					summary = next(readers[rank_id])
 				except StopIteration:
+					print('EXCEPT STOP ITERATION')
 					keep_reading = False
 					break
 				epoch_summary.set_from_dict(summary)
@@ -153,6 +154,7 @@ def forma_aggregate_epoch_files(rank_nr):
 				prev_rank_win = rank_win
 
 			if keep_reading == False:
+				print('KEEP READING IS FALSE')
 				break
 
 			curr_win = rank_win
@@ -163,6 +165,9 @@ def forma_aggregate_epoch_files(rank_nr):
 					'------------------------------------------------------------------------------------------\n')
 			aggregate_epoch_summary.print_summary()
 			prev_win = curr_win
+			#
+			aggregate_epoch_summary.reset()
+			#
 	sys.stdout = original_stdout # Reset the standard output to its original value
 	return 0
 

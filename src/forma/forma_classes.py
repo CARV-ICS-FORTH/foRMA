@@ -218,6 +218,7 @@ class epochSummary:
 		self.dtbounds		= np.zeros((3, 6), dtype=float)	#  -"-
 
 	def set_from_dict(self, dict):
+		self.initialized	= 1
 		self.win_id			= dict["win_id"]
 		self.epoch_nr		= dict["epoch_nr"]
 		self.callcount_per_opcode[GET]	= dict["mpi_gets"]
@@ -244,7 +245,7 @@ class epochSummary:
 			sys.exit(1)
 
 		if self.epoch_nr != other.epoch_nr:
-			fl.forma_logger.warning(f'Discrepancy of # of window epochs among processes. Are you profiling MPI_Win_fence-based executions?')
+			fl.forma_logger.warning(f'Discrepancy of # of window epochs among processes. Operand 1 is {self.epoch_nr} and operand 2 is {other.epoch_nr}. Are you profiling MPI_Win_fence-based executions?')
 			sys.exit(1)
 
 
