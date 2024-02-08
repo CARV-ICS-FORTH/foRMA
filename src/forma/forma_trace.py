@@ -73,8 +73,8 @@ class FormaSTrace(DumpiTrace):
 		## (key to which is win_id)
 		self.win_epochs_buffer = {}
 		self.curr_win_to_file = 0
-		self.to_print_wins = set()
-		self.to_print_done_wins = set()
+		self.stashed_win_ids = set()
+		self.stashed_closed_win_ids = set()
 		
 		## creating all necessary avro file book-keeping 
 		if not os.path.exists('./forma_meta/'):
@@ -264,7 +264,7 @@ class FormaSTrace(DumpiTrace):
 		fs.forma_streaming_stats_x3(self.trace_summary.winsizes, data.size)
 
 		if self.curr_win_to_file != win_id:
-			self.to_print_wins.add(win_id)
+			self.stashed_win_ids.add(win_id)
 
 
 	def on_win_free(self, data, thread, cpu_time, wall_time, perf_info):
@@ -283,11 +283,11 @@ class FormaSTrace(DumpiTrace):
 		## ensuring that epoch stats are written to avro file in the order in which 
 		## the windows were created. 
 		if win_id == self.curr_win_to_file:
-			self.to_print_wins.discard(win_id)
+			self.stashed_win_ids.discard(win_id)
 			
-			for i in range(len(self.to_print_wins)):
+			for i in range(len(self.stashed_win_ids)):
 				self.curr_win_to_file += 1
-				if i in self.to_print_wins:
+				if i in self.stashed_win_ids:
 					#print("foRMA PRINTING STASHED WINDOW DATA!")
 					for epochstats in self.win_epochs_buffer[i]:
 						self.writer.append({"win_id": epochstats.win_id, 
@@ -303,14 +303,14 @@ class FormaSTrace(DumpiTrace):
 							"mpi_put_dtb": epochstats.dtbounds[PUT].tolist(), 
 							"mpi_acc_dtb": epochstats.dtbounds[ACC].tolist()})
 
-				if i not in self.to_print_done_wins:
+				if i not in self.stashed_closed_win_ids:
 					break
 				else:
-					self.self.to_print_wins.discard(i)
+					self.self.stashed_win_ids.discard(i)
 
 		else:
-			self.to_print_done_wins.add(win_id)
-			#self.to_print_wins.remove(win_id)
+			self.stashed_closed_win_ids.add(win_id)
+			#self.stashed_win_ids.remove(win_id)
 
 
 		del self.epoch_stats_for_win[win_id]
@@ -324,62 +324,83 @@ class FormaSTrace(DumpiTrace):
 		wall_duration = (wall_time.stop - wall_time.start).to_ns()
 		#cpu_duration = (cpu_time.stop - cpu_time.start).to_ns()
 
-		self.trace_summary.callcount_per_opcode[GET] += 1
-		fs.forma_streaming_stats_x3(self.trace_summary.opdurations[GET], wall_duration)
-		fs.forma_streaming_stats_x3(self.trace_summary.xfer_per_opcode[GET], data.origincount*self.type_sizes[data.origintype])
+		try:
 
-		win_id = self.wintb[data.win]
-		self.data_xfer_per_window[win_id] += data.origincount*self.type_sizes[data.origintype]
+			self.trace_summary.callcount_per_opcode[GET] += 1
+			fs.forma_streaming_stats_x3(self.trace_summary.opdurations[GET], wall_duration)
+			fs.forma_streaming_stats_x3(self.trace_summary.xfer_per_opcode[GET], data.origincount*self.type_sizes[data.origintype])
 
-		self.epoch_stats_for_win[win_id].callcount_per_opcode[GET] += 1
-		fs.forma_streaming_stats_x3(self.epoch_stats_for_win[win_id].opdurations[GET], wall_duration)
+			win_id = self.wintb[data.win]
+			self.data_xfer_per_window[win_id] += data.origincount*self.type_sizes[data.origintype]
 
-		## dt bound for epoch
-		if self.epoch_stats_for_win[win_id].dtbounds[GET][MAX] == 0:
-			self.epoch_stats_for_win[win_id].dtbounds[GET][MAX] = wall_time.start.to_ns()
-		self.epoch_stats_for_win[win_id].dtbounds[GET][MIN] = wall_time.start.to_ns()
-		self.epoch_stats_for_win[win_id].dtbounds[GET][AGR] += wall_time.start.to_ns()
-		##
+			self.epoch_stats_for_win[win_id].callcount_per_opcode[GET] += 1
+			fs.forma_streaming_stats_x3(self.epoch_stats_for_win[win_id].opdurations[GET], wall_duration)
+
+			## dt bound for epoch
+			if self.epoch_stats_for_win[win_id].dtbounds[GET][MAX] == 0:
+				self.epoch_stats_for_win[win_id].dtbounds[GET][MAX] = wall_time.start.to_ns()
+			self.epoch_stats_for_win[win_id].dtbounds[GET][MIN] = wall_time.start.to_ns()
+			self.epoch_stats_for_win[win_id].dtbounds[GET][AGR] += wall_time.start.to_ns()
+			##
+
+		except Exception as e:
+			fl.forma_error('Unexpected error occurred: {e}')
+			exit(2)
+
 
 	def on_put(self, data, thread, cpu_time, wall_time, perf_info):
 		wall_duration = (wall_time.stop - wall_time.start).to_ns()
 		#cpu_duration = (cpu_time.stop - cpu_time.start).to_ns()
 
-		self.trace_summary.callcount_per_opcode[PUT] += 1
-		fs.forma_streaming_stats_x3(self.trace_summary.opdurations[PUT], wall_duration)
-		fs.forma_streaming_stats_x3(self.trace_summary.xfer_per_opcode[PUT], data.origincount*self.type_sizes[data.origintype])
+		try: 
+
+			self.trace_summary.callcount_per_opcode[PUT] += 1
+			fs.forma_streaming_stats_x3(self.trace_summary.opdurations[PUT], wall_duration)
+			fs.forma_streaming_stats_x3(self.trace_summary.xfer_per_opcode[PUT], data.origincount*self.type_sizes[data.origintype])
 
 
-		win_id = self.wintb[data.win]
-		self.data_xfer_per_window[win_id] += data.origincount*self.type_sizes[data.origintype]
+			win_id = self.wintb[data.win]
+			self.data_xfer_per_window[win_id] += data.origincount*self.type_sizes[data.origintype]
 
-		self.epoch_stats_for_win[win_id].callcount_per_opcode[PUT] += 1
-		fs.forma_streaming_stats_x3(self.epoch_stats_for_win[win_id].opdurations[GET], wall_duration)
+			self.epoch_stats_for_win[win_id].callcount_per_opcode[PUT] += 1
+			fs.forma_streaming_stats_x3(self.epoch_stats_for_win[win_id].opdurations[GET], wall_duration)
 
-		## dt bound for epoch
-		if self.epoch_stats_for_win[win_id].dtbounds[PUT][MAX] == 0:
-			self.epoch_stats_for_win[win_id].dtbounds[PUT][MAX] = wall_time.start.to_ns()
-		self.epoch_stats_for_win[win_id].dtbounds[PUT][MIN] = wall_time.start.to_ns()
-		self.epoch_stats_for_win[win_id].dtbounds[PUT][AGR] += wall_time.start.to_ns()
-		##
+			## dt bound for epoch
+			if self.epoch_stats_for_win[win_id].dtbounds[PUT][MAX] == 0:
+				self.epoch_stats_for_win[win_id].dtbounds[PUT][MAX] = wall_time.start.to_ns()
+			self.epoch_stats_for_win[win_id].dtbounds[PUT][MIN] = wall_time.start.to_ns()
+			self.epoch_stats_for_win[win_id].dtbounds[PUT][AGR] += wall_time.start.to_ns()
+			##
+
+		except Exception as e:
+			fl.forma_error('Unexpected error occurred: {e}')
+			exit(2)
+
 
 	def on_accumulate(self, data, thread, cpu_time, wall_time, perf_info):
 		wall_duration = (wall_time.stop - wall_time.start).to_ns()
 		#cpu_duration = (cpu_time.stop - cpu_time.start).to_ns()
 
-		self.trace_summary.callcount_per_opcode[ACC] += 1
-		fs.forma_streaming_stats_x3(self.trace_summary.opdurations[ACC], wall_duration)
-		fs.forma_streaming_stats_x3(self.trace_summary.xfer_per_opcode[ACC], data.origincount*self.type_sizes[data.origintype])
+		try:
 
-		win_id = self.wintb[data.win]
-		self.data_xfer_per_window[win_id] += data.origincount*self.type_sizes[data.origintype]
+			self.trace_summary.callcount_per_opcode[ACC] += 1
+			fs.forma_streaming_stats_x3(self.trace_summary.opdurations[ACC], wall_duration)
+			fs.forma_streaming_stats_x3(self.trace_summary.xfer_per_opcode[ACC], data.origincount*self.type_sizes[data.origintype])
 
-		self.epoch_stats_for_win[win_id].callcount_per_opcode[ACC] += 1
-		fs.forma_streaming_stats_x3(self.epoch_stats_for_win[win_id].opdurations[ACC], wall_duration)
+			win_id = self.wintb[data.win]
+			self.data_xfer_per_window[win_id] += data.origincount*self.type_sizes[data.origintype]
 
-		## dt bound for epoch
-		if self.epoch_stats_for_win[win_id].dtbounds[ACC][MAX] == 0:
-			self.epoch_stats_for_win[win_id].dtbounds[ACC][MAX] = wall_time.start.to_ns()
-		self.epoch_stats_for_win[win_id].dtbounds[ACC][MIN] = wall_time.start.to_ns()
-		self.epoch_stats_for_win[win_id].dtbounds[ACC][AGR] += wall_time.start.to_ns()
-		##
+			self.epoch_stats_for_win[win_id].callcount_per_opcode[ACC] += 1
+			fs.forma_streaming_stats_x3(self.epoch_stats_for_win[win_id].opdurations[ACC], wall_duration)
+
+			## dt bound for epoch
+			if self.epoch_stats_for_win[win_id].dtbounds[ACC][MAX] == 0:
+				self.epoch_stats_for_win[win_id].dtbounds[ACC][MAX] = wall_time.start.to_ns()
+			self.epoch_stats_for_win[win_id].dtbounds[ACC][MIN] = wall_time.start.to_ns()
+			self.epoch_stats_for_win[win_id].dtbounds[ACC][AGR] += wall_time.start.to_ns()
+			##
+
+
+		except Exception as e:
+			fl.forma_error('Unexpected error occurred: {e}')
+			exit(2)
