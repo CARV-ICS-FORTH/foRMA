@@ -126,7 +126,7 @@ def main():
 
 	for rank, tracefile in enumerate(tracefiles):
 		with ft.FormaSTrace(tracefile, rank) as trace:
-			fl.forma_print(f'Now parsing {tracefile}.\n')
+			fl.forma_print(f'Now checking footer for {tracefile}.\n')
 
 			trace.print_footer()
 	#return

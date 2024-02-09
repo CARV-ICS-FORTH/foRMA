@@ -72,7 +72,7 @@ class FormaSTrace(DumpiTrace):
 		## and append all epoch data of other windows to the corresponding entry in the win_epochs_buffer
 		## (key to which is win_id)
 		self.win_epochs_buffer = {}
-		self.curr_win_to_file = 0
+		self.curr_win_to_file = -1
 		self.stashed_win_ids = set()
 		self.stashed_closed_win_ids = set()
 		
@@ -221,7 +221,8 @@ class FormaSTrace(DumpiTrace):
 			epoch_stash = self.win_epochs_buffer.get(win_id)
 			if epoch_stash == None:
 				epoch_stash = []
-			epoch_stash.append(self.epoch_stats_for_win)
+			#epoch_stash.append(self.epoch_stats_for_win)
+			epoch_stash.append(self.epoch_stats_for_win[win_id])
 			self.win_epochs_buffer[win_id] = epoch_stash
 			# fl.forma_logger.debug(f'window data stashed for {win_id}')
 		self.epoch_stats_for_win[win_id].reset()
@@ -264,7 +265,11 @@ class FormaSTrace(DumpiTrace):
 		fs.forma_streaming_stats_x3(self.trace_summary.winsizes, data.size)
 
 		if self.curr_win_to_file != win_id:
-			self.stashed_win_ids.add(win_id)
+			if self.curr_win_to_file == -1:
+				self.curr_win_to_file = win_id
+			else:
+				self.stashed_win_ids.add(win_id)
+		print(f'STASHED WINDOWS: {self.stashed_win_ids}')
 
 
 	def on_win_free(self, data, thread, cpu_time, wall_time, perf_info):
@@ -280,37 +285,66 @@ class FormaSTrace(DumpiTrace):
 		self.lifetime_of_window[win_id] = wall_time.stop.to_ns() - self.lifetime_of_window[win_id]
 
 		
+		## ## ##
+
 		## ensuring that epoch stats are written to avro file in the order in which 
 		## the windows were created. 
 		if win_id == self.curr_win_to_file:
 			self.stashed_win_ids.discard(win_id)
-			
-			for i in range(len(self.stashed_win_ids)):
-				self.curr_win_to_file += 1
-				if i in self.stashed_win_ids:
-					#print("foRMA PRINTING STASHED WINDOW DATA!")
-					for epochstats in self.win_epochs_buffer[i]:
-						self.writer.append({"win_id": epochstats.win_id, 
-							"epoch_nr": epochstats.epoch_nr, 
-							"mpi_gets": int(epochstats.callcount_per_opcode[GET]), 
-							"mpi_puts": int(epochstats.callcount_per_opcode[PUT]), 
-							"mpi_accs": int(epochstats.callcount_per_opcode[ACC]), 
-							"mpi_get_times": epochstats.opdurations[GET].tolist(), 
-							"mpi_put_times": epochstats.opdurations[PUT].tolist(), 
-							"mpi_acc_times": epochstats.opdurations[ACC].tolist(), 
-							"tf_per_op": epochstats.xfer_per_opcode.tolist(), 
-							"mpi_get_dtb": epochstats.dtbounds[GET].tolist(), 
-							"mpi_put_dtb": epochstats.dtbounds[PUT].tolist(), 
-							"mpi_acc_dtb": epochstats.dtbounds[ACC].tolist()})
 
-				if i not in self.stashed_closed_win_ids:
+			print(f'win_id == self.curr_win_to_file - {win_id}')
+			
+			#for i in range(len(self.stashed_win_ids)):
+			stashed_ids_list = sorted(self.stashed_win_ids)
+
+			#print(f'--> Active Window: {win_id} -- CURRENTLY STASHED IDs: {self.stashed_win_ids}')
+
+			# for stashed_id in self.stashed_win_ids:
+			for stashed_id in stashed_ids_list:
+				#print(f'entering for i in range(len(self.stashed_win_ids)) with i = {i}')
+				self.curr_win_to_file += 1
+				#print(f'curr win id to file is now: {self.curr_win_to_file}')
+				#print(f'stashed win ids is {self.stashed_win_ids}')
+				#print(f'win id type: {type(win_id)}\ncurr_win_to_file type: {type(self.curr_win_to_file)}\ni type: {type(i)}')
+
+				try:
+					assert self.curr_win_to_file == stashed_id
+				except AssertionError:
+					print(f'Curr win to file is {self.curr_win_to_file} while current stashed id is {stashed_id}')
+					sys.exit(2) 
+
+				print(f'foRMA PRINTING STASHED WINDOW DATA to file for win {stashed_id}')
+				epoch_stash = self.win_epochs_buffer.get(stashed_id)
+				for epochstats in epoch_stash:
+					self.writer.append({"win_id": epochstats.win_id, 
+						"epoch_nr": epochstats.epoch_nr, 
+						"arrival" : epochstats.arrival,
+						"mpi_gets": int(epochstats.callcount_per_opcode[GET]), 
+						"mpi_puts": int(epochstats.callcount_per_opcode[PUT]), 
+						"mpi_accs": int(epochstats.callcount_per_opcode[ACC]), 
+						"mpi_get_times": epochstats.opdurations[GET].tolist(), 
+						"mpi_put_times": epochstats.opdurations[PUT].tolist(), 
+						"mpi_acc_times": epochstats.opdurations[ACC].tolist(), 
+						"tf_per_op": epochstats.xfer_per_opcode.tolist(), 
+						"mpi_get_dtb": epochstats.dtbounds[GET].tolist(), 
+						"mpi_put_dtb": epochstats.dtbounds[PUT].tolist(), 
+						"mpi_acc_dtb": epochstats.dtbounds[ACC].tolist()})
+
+
+				self.stashed_win_ids.discard(stashed_id)
+
+				if stashed_id not in self.stashed_closed_win_ids:
 					break
-				else:
-					self.self.stashed_win_ids.discard(i)
+				# else:
+				# 	self.stashed_win_ids.discard(stashed_id)
+
+
 
 		else:
 			self.stashed_closed_win_ids.add(win_id)
 			#self.stashed_win_ids.remove(win_id)
+
+		print(f'CLOSED WINDOWS: {self.stashed_closed_win_ids}')
 
 
 		del self.epoch_stats_for_win[win_id]
