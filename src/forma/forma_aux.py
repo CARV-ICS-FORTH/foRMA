@@ -146,6 +146,9 @@ def forma_aggregate_epoch_files(rank_nr):
 					# handle error at higher level
 					# fl.forma_error('Window ID discrepancy among files. Make sure you are using well-formatted SST Dumpi output files.')
 					sys.stdout = original_stdout # Reset the standard output to its original value
+					print(f'forma_aux: rank win is {rank_win}, prev rank win is {prev_rank_win}')
+					print(f'forma_aux: curr win is {curr_win}, prev win is {prev_win}')
+					
 					return 2
 
 				aggregate_epoch_summary += epoch_summary

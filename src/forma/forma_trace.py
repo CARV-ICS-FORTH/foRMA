@@ -170,6 +170,7 @@ class FormaSTrace(DumpiTrace):
 		## was done for the unordered epoch stats dumping to avro file, might be redundant.
 		self.epochcount_per_window[win_id]+=1
 		self.epoch_stats_for_win[win_id].win_id = win_id
+		self.epoch_stats_for_win[win_id].epoch_nr = self.epochcount_per_window[win_id]
 
 		## brief debug print, for reassurance...
 		# print(f'Window is {self.epoch_stats_for_win[win_id].win_id}, epoch is {self.epochcount_per_window[win_id]}')
@@ -225,11 +226,12 @@ class FormaSTrace(DumpiTrace):
 			# print(f'epoch stash for window {win_id} is ')
 			# for epoch in epoch_stash:
 			# 	epoch.print_summary()
-			# epoch_stash.append(self.epoch_stats_for_win[win_id])
-			# self.win_epochs_buffer[win_id] = epoch_stash
+			epoch_stash.append(self.epoch_stats_for_win[win_id])
+			self.win_epochs_buffer[win_id] = epoch_stash
 			print(f'window data stashed for {win_id} at epoch {self.epochcount_per_window[win_id]}: ')
 			self.epoch_stats_for_win[win_id].print_summary()
 		self.epoch_stats_for_win[win_id].reset()
+		#self.epoch_stats_for_win[win_id].win_id = win_id
 	
 
 	def on_win_create(self, data, thread, cpu_time, wall_time, perf_info):
