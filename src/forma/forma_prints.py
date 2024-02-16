@@ -180,19 +180,19 @@ def forma_print_stats_to_files(ranks, wins):
 	original_stdout = sys.stdout # Save a reference to the original standard output
 
 	with open('summary.txt', 'w') as f:
-	    sys.stdout = f # Change the standard output to the file we created.
-	    #print('This message will be written to a file.')
-	    forma_print_stats_summary(ranks, wins)
+		sys.stdout = f # Change the standard output to the file we created.
+		#print('This message will be written to a file.')
+		forma_print_stats_summary(ranks, wins)
 
 	with open('per_rank.txt', 'w') as f:
-	    sys.stdout = f # Change the standard output to the file we created.
-	    #print('This message will be written to a file.')
-	    forma_print_stats_per_rank(ranks)
+		sys.stdout = f # Change the standard output to the file we created.
+		#print('This message will be written to a file.')
+		forma_print_stats_per_rank(ranks)
 
 	with open('per_window.txt', 'w') as f:
-	    sys.stdout = f # Change the standard output to the file we created.
-	    #print('This message will be written to a file.')
-	    forma_print_stats_per_window(ranks, wins)
+		sys.stdout = f # Change the standard output to the file we created.
+		#print('This message will be written to a file.')
+		forma_print_stats_per_window(ranks, wins)
 
 	sys.stdout = original_stdout # Reset the standard output to its original value
 

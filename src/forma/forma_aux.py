@@ -125,6 +125,7 @@ def forma_aggregate_epoch_files(rank_nr):
 	prev_win = -1
 	rank_win = 0
 	prev_rank_win = 0
+	iteration = 0
 	original_stdout = sys.stdout # Save a reference to the original standard output
 	with open('forma_out/epochs.txt', 'w') as f:
 		sys.stdout = f # Change the standard output to the file we created.
@@ -142,13 +143,11 @@ def forma_aggregate_epoch_files(rank_nr):
 				epoch_summary.set_from_dict(summary)
 
 				rank_win = epoch_summary.win_id
-				if rank_win != prev_rank_win:
+				if rank_win != prev_rank_win and rank_id != 0:
 					# handle error at higher level
 					# fl.forma_error('Window ID discrepancy among files. Make sure you are using well-formatted SST Dumpi output files.')
 					sys.stdout = original_stdout # Reset the standard output to its original value
-					print(f'forma_aux: rank win is {rank_win}, prev rank win is {prev_rank_win}')
-					print(f'forma_aux: curr win is {curr_win}, prev win is {prev_win}')
-					
+					print(f'ITERATION {iteration}: ERROR AT RANK id {rank_id}: curr win {curr_win}, prev win {prev_win}, rank win {rank_win}, prev rank win {prev_rank_win}')
 					return 2
 
 				aggregate_epoch_summary += epoch_summary
@@ -171,6 +170,7 @@ def forma_aggregate_epoch_files(rank_nr):
 			#
 			aggregate_epoch_summary.reset()
 			#
+			iteration += 1
 	sys.stdout = original_stdout # Reset the standard output to its original value
 	return 0
 
