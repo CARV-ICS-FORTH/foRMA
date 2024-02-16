@@ -222,21 +222,8 @@ class FormaSTrace(DumpiTrace):
 			# the epoch data 
 			print(f'WIN FENCE - new epoch data to be stashed for window {win_id} at epoch {self.epochcount_per_window[win_id]}: ')
 			self.epoch_stats_for_win[win_id].print_summary()
-			print(f'epoch_stats_for_win  type is {type(self.epoch_stats_for_win[win_id])}')
 
 			print(f'current data in epoch stash for window {win_id} is ', end='')
-			"""epoch_stash = self.win_epochs_buffer.get(win_id)
-			if epoch_stash == None:
-				epoch_stash = []
-				self.win_epochs_buffer[win_id] = []
-				print(': NONE')
-			else:
-				print('')
-			
-			for epoch in epoch_stash:
-				epoch.print_summary()"""
-
-			
 			if self.win_epochs_buffer.get(win_id) == None:
 				self.win_epochs_buffer[win_id] = []
 				print(': NONE')
@@ -246,15 +233,7 @@ class FormaSTrace(DumpiTrace):
 			for epoch in self.win_epochs_buffer.get(win_id):
 				epoch.print_summary()
 			
-			# epoch_stash.append(self.epoch_stats_for_win[win_id])
-			# print('------------------- AFTER APPEND -----------------------')
-			# for epoch in epoch_stash:
-			# 	epoch.print_summary()
-				
-			# self.win_epochs_buffer[win_id] = epoch_stash
-				
-			
-			
+
 			self.win_epochs_buffer[win_id].append(copy.copy(self.epoch_stats_for_win[win_id]))
 			print('------------------- AFTER APPEND -----------------------')
 			for epoch in self.win_epochs_buffer[win_id]:
@@ -365,23 +344,25 @@ class FormaSTrace(DumpiTrace):
 					print(f'Curr win to file is {self.curr_win_to_file}, counter is {i}, while current stashed id is {stashed_id}')
 					sys.exit(2) 
 
-				print(f'foRMA PRINTING STASHED WINDOW DATA to file for win {stashed_id}')
-				epoch_stash = self.win_epochs_buffer.get(stashed_id)
-				if epoch_stash:
-					for epochstats in epoch_stash:
-						self.writer.append({"win_id": epochstats.win_id, 
-							"epoch_nr": epochstats.epoch_nr, 
-							"arrival" : epochstats.arrival,
-							"mpi_gets": int(epochstats.callcount_per_opcode[GET]), 
-							"mpi_puts": int(epochstats.callcount_per_opcode[PUT]), 
-							"mpi_accs": int(epochstats.callcount_per_opcode[ACC]), 
-							"mpi_get_times": epochstats.opdurations[GET].tolist(), 
-							"mpi_put_times": epochstats.opdurations[PUT].tolist(), 
-							"mpi_acc_times": epochstats.opdurations[ACC].tolist(), 
-							"tf_per_op": epochstats.xfer_per_opcode.tolist(), 
-							"mpi_get_dtb": epochstats.dtbounds[GET].tolist(), 
-							"mpi_put_dtb": epochstats.dtbounds[PUT].tolist(), 
-							"mpi_acc_dtb": epochstats.dtbounds[ACC].tolist()})
+				if stashed_id != self.curr_win_to_file:
+
+					print(f'foRMA PRINTING STASHED WINDOW DATA to file for win {stashed_id}')
+					epoch_stash = self.win_epochs_buffer.get(stashed_id)
+					if epoch_stash:
+						for epochstats in epoch_stash:
+							self.writer.append({"win_id": epochstats.win_id, 
+								"epoch_nr": epochstats.epoch_nr, 
+								"arrival" : epochstats.arrival,
+								"mpi_gets": int(epochstats.callcount_per_opcode[GET]), 
+								"mpi_puts": int(epochstats.callcount_per_opcode[PUT]), 
+								"mpi_accs": int(epochstats.callcount_per_opcode[ACC]), 
+								"mpi_get_times": epochstats.opdurations[GET].tolist(), 
+								"mpi_put_times": epochstats.opdurations[PUT].tolist(), 
+								"mpi_acc_times": epochstats.opdurations[ACC].tolist(), 
+								"tf_per_op": epochstats.xfer_per_opcode.tolist(), 
+								"mpi_get_dtb": epochstats.dtbounds[GET].tolist(), 
+								"mpi_put_dtb": epochstats.dtbounds[PUT].tolist(), 
+								"mpi_acc_dtb": epochstats.dtbounds[ACC].tolist()})
 
 
 				#self.stashed_win_ids.discard(stashed_id)
@@ -453,7 +434,7 @@ class FormaSTrace(DumpiTrace):
 			self.data_xfer_per_window[win_id] += data.origincount*self.type_sizes[data.origintype]
 
 			self.epoch_stats_for_win[win_id].callcount_per_opcode[PUT] += 1
-			fs.forma_streaming_stats_x3(self.epoch_stats_for_win[win_id].opdurations[GET], wall_duration)
+			fs.forma_streaming_stats_x3(self.epoch_stats_for_win[win_id].opdurations[PUT], wall_duration)
 
 			## dt bound for epoch
 			if self.epoch_stats_for_win[win_id].dtbounds[PUT][MAX] == 0:
