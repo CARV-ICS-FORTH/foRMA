@@ -220,32 +220,32 @@ class FormaSTrace(DumpiTrace):
 		else:
 			# another window is currently written to avro file -- so, we have to stash 
 			# the epoch data 
-			print(f'WIN FENCE - new epoch data to be stashed for window {win_id} at epoch {self.epochcount_per_window[win_id]}: ')
-			self.epoch_stats_for_win[win_id].print_summary()
+			#print(f'WIN FENCE - new epoch data to be stashed for window {win_id} at epoch {self.epochcount_per_window[win_id]}: ')
+			#self.epoch_stats_for_win[win_id].print_summary()
 
-			print(f'current data in epoch stash for window {win_id} is ', end='')
+			#print(f'current data in epoch stash for window {win_id} is ', end='')
 			if self.win_epochs_buffer.get(win_id) == None:
 				self.win_epochs_buffer[win_id] = []
-				print(': NONE')
-			else:
-				print('')
+			#	print(': NONE')
+			#else:
+			#	print('')
 			
-			for epoch in self.win_epochs_buffer.get(win_id):
-				epoch.print_summary()
+			# for epoch in self.win_epochs_buffer.get(win_id):
+			# 	epoch.print_summary()
 			
 
 			self.win_epochs_buffer[win_id].append(copy.copy(self.epoch_stats_for_win[win_id]))
-			print('------------------- AFTER APPEND -----------------------')
-			for epoch in self.win_epochs_buffer[win_id]:
-				epoch.print_summary()
+			# print('------------------- AFTER APPEND -----------------------')
+			# for epoch in self.win_epochs_buffer[win_id]:
+			# 	epoch.print_summary()
 
-			print(f'---> UPDATED data in epoch stash for window {win_id} is ')
-			epoch_stash_upd = self.win_epochs_buffer.get(win_id)
-			if epoch_stash_upd == None:
-				epoch_stash_upd = []
+			# print(f'---> UPDATED data in epoch stash for window {win_id} is ')
+			# epoch_stash_upd = self.win_epochs_buffer.get(win_id)
+			# if epoch_stash_upd == None:
+			# 	epoch_stash_upd = []
 	
-			for epoch in epoch_stash_upd:
-				epoch.print_summary()
+			# for epoch in epoch_stash_upd:
+			# 	epoch.print_summary()
 
 		self.epoch_stats_for_win[win_id].reset()
 		#self.epoch_stats_for_win[win_id].win_id = win_id
@@ -287,7 +287,7 @@ class FormaSTrace(DumpiTrace):
 		fs.forma_streaming_stats_x3(self.trace_summary.opdurations[WIN_CR], wall_duration)
 		fs.forma_streaming_stats_x3(self.trace_summary.winsizes, data.size)
 
-		print(f'WIN CREATE: curr win to file: {self.curr_win_to_file} / win_id: {win_id} / stashed: {self.stashed_win_ids}')
+		#print(f'WIN CREATE: curr win to file: {self.curr_win_to_file} / win_id: {win_id} / stashed: {self.stashed_win_ids}')
 		if self.curr_win_to_file != win_id:
 			if self.curr_win_to_file == -1:
 				self.curr_win_to_file = win_id
@@ -296,7 +296,7 @@ class FormaSTrace(DumpiTrace):
 					self.curr_win_to_file = win_id
 				#else:
 		self.stashed_win_ids.add(win_id)
-		print(f'WIN CREATE: STASHED WINDOWS: {self.stashed_win_ids}')
+		#print(f'WIN CREATE: STASHED WINDOWS: {self.stashed_win_ids}')
 
 
 	def on_win_free(self, data, thread, cpu_time, wall_time, perf_info):
@@ -321,7 +321,7 @@ class FormaSTrace(DumpiTrace):
 		if win_id == self.curr_win_to_file:
 			#self.stashed_win_ids.discard(win_id)
 
-			print(f'win_id == self.curr_win_to_file - {win_id}')
+		#	print(f'win_id == self.curr_win_to_file - {win_id}')
 
 			#self.curr_win_to_file += 1
 
@@ -346,7 +346,7 @@ class FormaSTrace(DumpiTrace):
 
 				if stashed_id != self.curr_win_to_file:
 
-					print(f'foRMA PRINTING STASHED WINDOW DATA to file for win {stashed_id}')
+		#			print(f'foRMA PRINTING STASHED WINDOW DATA to file for win {stashed_id}')
 					epoch_stash = self.win_epochs_buffer.get(stashed_id)
 					if epoch_stash:
 						for epochstats in epoch_stash:
@@ -381,7 +381,7 @@ class FormaSTrace(DumpiTrace):
 		# 	self.stashed_closed_win_ids.add(win_id)
 		# 	#self.stashed_win_ids.remove(win_id)
 
-		print(f'WIN FREE for {win_id} - CLOSED WINDOWS: {self.stashed_closed_win_ids}')
+		#print(f'WIN FREE for {win_id} - CLOSED WINDOWS: {self.stashed_closed_win_ids}')
 		
 
 		del self.epoch_stats_for_win[win_id]
