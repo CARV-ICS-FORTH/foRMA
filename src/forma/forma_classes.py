@@ -280,5 +280,132 @@ class epochSummary:
 		print('---------------------------- Operation Durations -------------------------------------------\n')
 		fp.forma_print_stats_x4(["MPI_Get", "MPI_Put", "MPI_Accumulate"], opduration_stats, 0)
 
+		dtbounds_stats = []
+		for i in range(len(self.dtbounds)):
+			dtbounds_stats.append((self.dtbounds[i][0:4]).tolist())
+		print('------------------------------------------------------------------------------------------\n' +
+		'-------------------------- Data Transfer Bounds ------------------------------------------\n')
+		fp.forma_print_stats_x4(["MPI_Get", "MPI_Put", "MPI_Accumulate"], dtbounds_stats, 0)
+		
+		return True
+
+
+class windowSummary:
+
+	def __init__(self, size):
+
+		self.initialized	= 0
+		self.win_id			= 0
+		self.epoch_nr		= 0
+		self.winsize		= size
+		self.callcount_per_opcode	= np.zeros(3, dtype=int) 	# tracking 3 opcodes
+		self.opdurations	= np.zeros((3, 4), dtype=float)	# tracking 3 opcodes, 4 statistics for each
+		self.xfer_per_opcode	= np.zeros(3, dtype=float)	# 4 statistics for transfer sizes, tracking 3 opcodes
+		self.dtbounds		= np.zeros((3, 6), dtype=float)	#  -"-
+		
+
+	def reset(self):
+		self.initialized	= 0
+		self.win_id			= 0
+		self.epoch_nr		= 0
+		self.callcount_per_opcode	= np.zeros(3, dtype=int) 	# tracking 3 opcodes
+		self.opdurations	= np.zeros((3, 4), dtype=float)	# tracking 3 opcodes, 4 statistics for each
+		self.xfer_per_opcode	= np.zeros(3, dtype=float)	# 4 statistics for transfer sizes, tracking 3 opcodes
+		self.dtbounds		= np.zeros((3, 6), dtype=float)	#  -"-
+
+	def set_from_dict(self, dict):
+		self.initialized	= 1
+		self.win_id			= dict["win_id"]
+		self.epoch_nr		= dict["epoch_nr"]
+		self.callcount_per_opcode[GET]	= dict["mpi_gets"]
+		self.callcount_per_opcode[PUT]	= dict["mpi_puts"]
+		self.callcount_per_opcode[ACC]	= dict["mpi_accs"]
+		self.opdurations[GET]	= dict["mpi_get_times"]
+		self.opdurations[PUT]	= dict["mpi_put_times"]
+		self.opdurations[ACC]	= dict["mpi_acc_times"]
+		self.xfer_per_opcode	= dict["tf_per_op"]
+		self.dtbounds[GET]		= dict["mpi_get_dtb"]
+		self.dtbounds[PUT]		= dict["mpi_put_dtb"]
+		self.dtbounds[ACC]		= dict["mpi_acc_dtb"]
+
+
+	def set_finals(self, transfers, lifetime, epochcount):
+
+		self.totaltransfer = transfers
+		self.lifetime = lifetime
+		self.epoch_nr = epochcount
+
+
+
+	def __iadd__(self, other):
+
+		if isinstance(other, epochSummary):
+			self.win_id = other.win_id
+
+			self.callcount_per_opcode += other.callcount_per_opcode
+
+			for opcode in (GET, PUT, ACC):
+				#fs.forma_merge_stats_x4(self.xfer_per_opcode[opcode], other.xfer_per_opcode[opcode])
+				fs.forma_merge_stats_x4(self.dtbounds[opcode], other.dtbounds[opcode])
+				fs.forma_merge_stats_x4(self.opdurations[opcode], other.opdurations[opcode])
+
+		else: 
+			if not self.initialized: 
+				self.win_id = other.win_id
+				self.epoch_nr = other.epoch_nr
+				self.initialized = 1
+
+			if self.win_id != other.win_id:
+				fl.forma_logger.warning(f'Discrepancy of window ID!')
+				sys.exit(1)
+
+			if self.epoch_nr != other.epoch_nr:
+				fl.forma_logger.warning(f'Discrepancy of # of window epochs among processes. Operand 1 is {self.epoch_nr} and operand 2 is {other.epoch_nr}. Are you profiling MPI_Win_fence-based executions?')
+				sys.exit(1)
+
+
+			self.callcount_per_opcode += other.callcount_per_opcode
+
+			for opcode in (GET, PUT, ACC):
+				#fs.forma_merge_stats_x4(self.xfer_per_opcode[opcode], other.xfer_per_opcode[opcode])
+				fs.forma_merge_stats_x4(self.dtbounds[opcode], other.dtbounds[opcode])
+				fs.forma_merge_stats_x4(self.opdurations[opcode], other.opdurations[opcode])
+
+		return self
+
+
+	def set_averages(self):
+
+		call_count_sum = 0
+
+		for opcode in (GET, PUT, ACC):
+			if self.callcount_per_opcode[opcode] != 0:
+				#self.xfer_per_opcode[opcode][AVG] = self.xfer_per_opcode[opcode][AGR] / self.callcount_per_opcode[opcode]
+				self.dtbounds[opcode][AVG] = self.dtbounds[opcode][AGR] / self.callcount_per_opcode[opcode]
+				self.opdurations[opcode][AVG] = self.opdurations[opcode][AGR] / self.callcount_per_opcode[opcode]
+				call_count_sum += self.callcount_per_opcode[opcode]
+
+
+	def print_summary(self):
+		print(f'----------------------------- Summary for WINDOW {self.win_id} ------------------------------------------\n')
+
+		print(f'Size: {self.winsize}\n' + 
+			f'# of epochs: {self.epoch_nr}\n' + 
+			f'# of bytes transferred: {self.totaltransfer}\n' +
+			f'Window lifetime: {self.lifetime}\n')
+
+
+		opduration_stats = []
+		for i in range(len(self.opdurations)):
+			opduration_stats.append((self.opdurations[i][0:4]).tolist())
+		print('---------------------------- Operation Durations -------------------------------------------\n')
+		fp.forma_print_stats_x4(["MPI_Get", "MPI_Put", "MPI_Accumulate"], opduration_stats, 0)
+
+		dtbounds_stats = []
+		for i in range(len(self.dtbounds)):
+			dtbounds_stats.append((self.dtbounds[i][0:4]).tolist())
+		print('------------------------------------------------------------------------------------------\n' +
+		'-------------------------- Data Transfer Bounds ------------------------------------------\n')
+		fp.forma_print_stats_x4(["MPI_Get", "MPI_Put", "MPI_Accumulate"], dtbounds_stats, 0)
 		
 		return True

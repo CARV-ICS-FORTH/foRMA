@@ -54,6 +54,7 @@ def forma_parse_traces(tracefiles):
 
 
 	exec_summary = fc.formaSummary()
+	window_summaries = []
 
 	ranks = 0
 	wins = 0
@@ -106,8 +107,29 @@ def forma_parse_traces(tracefiles):
 			
 			exec_summary += trace.trace_summary
 
+			for i, winsum in enumerate(trace.window_summaries):
+				if len(window_summaries) < trace.trace_summary.wins:
+					window_summaries.append(winsum)
+					#print(f'forma_parse: initializing window summary to:')
+					#winsum.print_summary()
+				else:
+					window_summaries[i] += winsum
+					#print(f'forma_parse: window summary is:')
+					#window_summaries[i].print_summary()
+
+
 	writer.close()
 	exec_summary.set_averages()
+
+	original_stdout = sys.stdout # Save a reference to the original standard output
+	with open('forma_out/windows.txt', 'w') as f:
+		sys.stdout = f # Change the standard output to the file we created.
+		for i, winsum in enumerate(window_summaries):
+			winsum.set_averages()
+			winsum.print_summary()
+	sys.stdout = original_stdout # Reset the standard output to its original value
+	
+
 
 	# reader = DataFileReader(open("rank_summaries.avro", "rb"), DatumReader())
 	# for summary in reader:

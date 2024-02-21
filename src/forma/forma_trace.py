@@ -61,6 +61,7 @@ class FormaSTrace(DumpiTrace):
 		self.epochcount_per_window = []
 		self.data_xfer_per_window = []
 		self.lifetime_of_window = []
+		self.window_summaries = []
 
 		## similarly but not exactly the same, we use win_id as key to the following dictionary
 		## in order to access epoch statistics for the currently active epoch for this window
@@ -198,6 +199,12 @@ class FormaSTrace(DumpiTrace):
 				fs.forma_merge_stats_x4(self.trace_summary.dtbounds[opcode], self.epoch_stats_for_win[win_id].dtbounds[opcode])
 		## 
 # 
+		## update window summary
+		#self.epoch_stats_for_win[win_id].print_summary()
+		self.window_summaries[win_id] += self.epoch_stats_for_win[win_id]
+		#self.window_summaries[win_id].print_summary()
+		##
+
 		## ensuring that epoch stats are written to avro file in the order in which 
 		## the windows were created. 
 		if win_id == self.curr_win_to_file:
@@ -278,6 +285,7 @@ class FormaSTrace(DumpiTrace):
 		self.epochcount_per_window.append(-1)
 		self.data_xfer_per_window.append(0)
 		self.lifetime_of_window.append(wall_time.start.to_ns())
+		self.window_summaries.append(fc.windowSummary(data.size))
 		##
 
 		self.epoch_stats_for_win[win_id] = fc.epochSummary()
@@ -311,7 +319,11 @@ class FormaSTrace(DumpiTrace):
 
 		self.lifetime_of_window[win_id] = wall_time.stop.to_ns() - self.lifetime_of_window[win_id]
 
-		
+		##
+
+		self.window_summaries[win_id].set_finals(self.data_xfer_per_window[win_id], self.lifetime_of_window[win_id], self.epochcount_per_window[win_id])
+
+
 		## ## ##
 
 		self.stashed_closed_win_ids.add(win_id)

@@ -118,17 +118,18 @@ def main():
 
 
 	metafile =  format(str(dirname))+'/'+format(str('dumpi-'+format(str(timestamp))+'.meta'))
-	keyvals = pd.util.read_meta_file(metafile)
 
-	for key, val in keyvals.items():
-		fl.forma_print(f'Key {key} has value {val}')
+	# keyvals = pd.util.read_meta_file(metafile)
+
+	# for key, val in keyvals.items():
+	# 	fl.forma_print(f'Key {key} has value {val}')
 
 
-	for rank, tracefile in enumerate(tracefiles):
-		with ft.FormaSTrace(tracefile, rank) as trace:
-			fl.forma_print(f'Now checking footer for {tracefile}.\n')
+	# for rank, tracefile in enumerate(tracefiles):
+	# 	with ft.FormaSTrace(tracefile, rank) as trace:
+	# 		fl.forma_print(f'Now checking footer for {tracefile}.\n')
 
-			trace.print_footer()
+	# 		trace.print_footer()
 	#return
 
 
@@ -216,6 +217,7 @@ def main():
 			with open('forma_out/calls.txt', 'w') as f:
 				sys.stdout = f # Change the standard output to the file we created.
 				for rid, summary in enumerate(reader):
+					print(f'------------------------------------ RANK {rid} ---------------------------------------------')
 					rank_summary.set_from_dict(summary)
 					rank_summary.print_summary()
 				reader.close()
