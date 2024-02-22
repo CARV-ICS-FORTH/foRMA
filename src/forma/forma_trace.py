@@ -10,6 +10,7 @@ import glob, os
 import re
 import fnmatch
 import copy
+import numpy as np
 
 import ctypes
 
@@ -184,7 +185,7 @@ class FormaSTrace(DumpiTrace):
 		# 		self.epoch_stats_for_win[win_id].opdurations[opcode][AVG] = self.epoch_stats_for_win[win_id].opdurations[opcode][AGR] / self.epoch_stats_for_win[win_id].callcount_per_opcode[opcode]
 		# 	epoch_stats.append((self.epoch_stats_for_win[win_id].opdurations[opcode]).tolist())
 		
-		# fo.forma_print_stats_x4(["MPI_Get", "MPI_Put", "MPI_Accumulate"], epoch_stats)
+		# fo.forma_print_stats_x4(["MPI_Get", "MPI_Put", "MPI_Accumulate"], epoch_stats, 0)
 		## debug print end
 
 
@@ -193,7 +194,7 @@ class FormaSTrace(DumpiTrace):
 			if self.epoch_stats_for_win[win_id].callcount_per_opcode[opcode] != 0:
 				self.epoch_stats_for_win[win_id].dtbounds[opcode][MIN] = wall_time.stop.to_ns() - self.epoch_stats_for_win[win_id].dtbounds[opcode][MIN]
 				self.epoch_stats_for_win[win_id].dtbounds[opcode][MAX] = wall_time.stop.to_ns() - self.epoch_stats_for_win[win_id].dtbounds[opcode][MAX]
-				self.epoch_stats_for_win[win_id].dtbounds[opcode][AGR] = (self.epoch_stats_for_win[win_id].callcount_per_opcode[opcode]*wall_time.stop.to_ns()) - self.epoch_stats_for_win[win_id].dtbounds[opcode][AGR]
+				self.epoch_stats_for_win[win_id].dtbounds[opcode][AGR] = (np.float64(self.epoch_stats_for_win[win_id].callcount_per_opcode[opcode])*wall_time.stop.to_ns()) - self.epoch_stats_for_win[win_id].dtbounds[opcode][AGR]
 				#self.epoch_stats_for_win[win_id].dtbounds[opcode][AVG] = self.epoch_stats_for_win[win_id].dtbounds[opcode][AGR] / self.epoch_stats_for_win[win_id].callcount_per_opcode[opcode]
 
 				fs.forma_merge_stats_x4(self.trace_summary.dtbounds[opcode], self.epoch_stats_for_win[win_id].dtbounds[opcode])

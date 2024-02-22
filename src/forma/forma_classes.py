@@ -138,10 +138,12 @@ class formaSummary:
 				self.opdurations[opcode][AVG] = self.opdurations[opcode][AGR] / self.callcount_per_opcode[opcode]
 				call_count_sum += self.callcount_per_opcode[opcode]
 		
-		if call_count_sum != 0:
-			self.xfer_per_win[AVG] = self.xfer_per_win[AGR] / call_count_sum
+		# if call_count_sum != 0:
+		# 	self.xfer_per_win[AVG] = self.xfer_per_win[AGR] / call_count_sum
+
 
 		if self.wins != 0:
+			self.xfer_per_win[AVG] = self.xfer_per_win[AGR] / self.wins
 			self.winsizes[AVG] = self.winsizes[AGR] / self.wins ## not sure it's correctly calculated 
 			self.epochs[AVG] = self.epochs[AGR] / self.wins ## not sure it's correctly calculated 
 			self.windurations[AVG] = self.windurations[AGR] / (self.wins*self.ranks) # is that the right way?
