@@ -180,4 +180,23 @@ def forma_aggregate_epoch_files(rank_nr):
 
 def forma_aggregate_fence_arrivals(rank_nr):
 
+	epoch_count = -1
+	epoch_summary = fc.epochSummary()
+	# schema = avro.schema.parse(open("../schemas/summary.avsc", "rb").read())
+	resource_string = importlib.resources.files('forma.schemas').joinpath('summary.avsc')
+	with importlib.resources.as_file(resource_string) as resource:
+		schema = avro.schema.parse(open(resource, "rb").read())
+	epochfiles = []
+	readers = []
+	offsets = []
+	epoch_cnt = 0
+	curr_lines = 0
+	for rank_id in range(0, rank_nr):
+		epochsumfile = "./forma_meta/epochs-"+str(rank_id)+".avro"
+		epochfiles.append(epochsumfile)
+		readers.append(DataFileReader(open(epochsumfile, "rb"), DatumReader(schema)))
+		next(readers[rank_id])
+
+	fl.forma_print(f'Aggregating results from {rank_nr} meta-files.')
+
 	return 0

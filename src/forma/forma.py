@@ -198,13 +198,13 @@ def main():
 				sys.exit(2)
 			fl.forma_print('Statistics per epoch (fence-based synchronization) can be found in file forma_out/epochs.txt\n')
 		elif action == 'f':
-			fl.forma_print('Output not yet fully supported by current foRMA version. Please find intermediate results in file(s) ./forma_meta/epochs-<rank ID>.avro. ')
-			# fl.forma_print('Preparing results...')
-			# err = fa.forma_aggregate_fence_arrivals(exec_summary.ranks)
-			# if err == 2:
-			# 	fl.forma_error('Window ID discrepancy among files. Make sure you are using well-formatted SST Dumpi output files.')
-			# 	sys.exit(2)
-			# fl.forma_print('Fence statistics can be found in file forma_out/fences.txt.\n')
+			# fl.forma_print('Output not yet fully supported by current foRMA version. Please find intermediate results in file(s) ./forma_meta/epochs-<rank ID>.avro. ')
+			fl.forma_print('Preparing results...')
+			err = fa.forma_aggregate_fence_arrivals(exec_summary.ranks)
+			if err == 2:
+			 	fl.forma_error('Window ID discrepancy among files. Make sure you are using well-formatted SST Dumpi output files.')
+			 	sys.exit(2)
+			fl.forma_print('Fence statistics can be found in file forma_out/fences.txt.\n')
 		elif action == 'c':
 			fl.forma_print('Preparing results...')
 			rank_summary = fc.formaSummary()
