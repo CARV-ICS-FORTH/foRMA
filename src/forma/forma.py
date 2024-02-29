@@ -62,11 +62,7 @@ rma_tracked_calls = ['MPI_Win_create', 'MPI_Get', 'MPI_Put', 'MPI_Accumulate', '
 
 def main():
 
-	fl.forma_intro()
-	fl.forma_print('Preparing analysis of trace.')
-
 	global dirname, timestamp
-
 
 	## user interaction initializations ##
 	action = 'p'
@@ -101,6 +97,8 @@ def main():
 	go_meta = args.meta
 
 
+	fl.forma_intro()
+
 	if args.debug:
 		log_level = logging.DEBUG
 		fl.set_forma_loglevel(fl.forma_logger, log_level)
@@ -124,13 +122,8 @@ def main():
 	if not os.path.exists(fg.outdir):
 		os.mkdir(fg.outdir)
 
+	summaryfile = fg.outdir+"exec_summary.txt"
 
-	tracefiles = fa.check_filepaths(dirname, timestamp)
-	if tracefiles == None:
-		fl.forma_print('No trace files found. Exiting.\n')
-		sys.exit(-1)
-
-	metafile =  format(str(dirname))+'/'+format(str('dumpi-'+format(str(timestamp))+'.meta'))
 
 	# keyvals = pd.util.read_meta_file(metafile)
 
@@ -146,48 +139,74 @@ def main():
 	#return
 
 
+	tracefiles, total_ranks = fa.check_filepaths(dirname, timestamp)
+	if tracefiles == None:
+		fl.forma_print('No trace files found. Exiting.\n')
+		sys.exit(-1)
+
+	metafile =  format(str(dirname))+'/'+format(str('dumpi-'+format(str(timestamp))+'.meta'))
+
+
 ################ Stage #0 ends here ########################################
 
-	exec_summary = fp.forma_parse_traces(tracefiles)
+	if go_meta:
 
-	summaryfile = fg.outdir+"exec_summary.txt"
+		fl.forma_print('Checking whether trace has already been analysed.')
 
-	total_callbacks = np.sum(exec_summary.callcount_per_opcode)
-	if total_callbacks == 0:
-		fl.forma_error('Zero callbacks detected. Make sure you are using well-formatted SST Dumpi output files.')
-		sys.exit(1)
-	total_rmas = exec_summary.callcount_per_opcode[GET]+exec_summary.callcount_per_opcode[PUT]+exec_summary.callcount_per_opcode[ACC]
-	if total_rmas== 0:
-		fl.forma_error('Zero RMA callbacks detected. Make sure you are profiling traces of an RMA-based application.')
-		sys.exit(1)
-	rma_pc = round((total_rmas/total_callbacks)*100, 2)
-	total_synch = exec_summary.callcount_per_opcode[FENCE]
-	synch_pc = round((total_synch/total_callbacks)*100, 2)
-	total_win = exec_summary.callcount_per_opcode[WIN_CR]+exec_summary.callcount_per_opcode[WIN_FREE]
-	if exec_summary.callcount_per_opcode[WIN_CR] != exec_summary.callcount_per_opcode[WIN_FREE]:
-		fl.forma_error('Discrepancy between MPI_Win_create/MPI_Win_free call counts. Make sure you are using well-formatted SST Dumpi output files.')
-		sys.exit(1)
-	if total_win== 0:
-		fl.forma_error('Zero MPI_Win_create detected. Currently, foRMA only supports MPI_Win_create/MPI_Win_free -based window creation.')
-		sys.exit(1)
-	win_pc = round((total_win/total_callbacks)*100, 2)
+		if not os.path.exists(summaryfile):
+			fl.forma_error(f'Trace files of execution with timestame {timestamp} have not yet been parsed!')
+			sys.exit(2)
+		else: 
+			fl.forma_print('Trace has already been parsed. Summary below:\n')
+			with open(summaryfile, 'r') as file:
+				exec_summary_out = file.read()
+				print(exec_summary_out)
 
-	fl.forma_print(f'Handled {total_callbacks} callbacks during the parsing of {exec_summary.ranks} trace files.\n' +
-		f'\t    Out of those, {total_rmas} (i.e. {rma_pc}% of callbacks) refer to remote memory accesses.\n' +
-		f'\t    Out of those, {total_synch} (i.e. {synch_pc}% of callbacks) refer to fence synchronization.\n'+
-		f'\t    Out of those, {total_win} (i.e. {win_pc}% of callbacks) refer to window creation/destruction.\n')
-	
-	with open(summaryfile, 'w') as file:
-		file.write(f'Handled {total_callbacks} callbacks during the parsing of {exec_summary.ranks} trace files.\n' +
-		f'\t    Out of those, {total_rmas} (i.e. {rma_pc}% of callbacks) refer to remote memory accesses.\n' +
-		f'\t    Out of those, {total_synch} (i.e. {synch_pc}% of callbacks) refer to fence synchronization.\n'+
-		f'\t    Out of those, {total_win} (i.e. {win_pc}% of callbacks) refer to window creation/destruction.\n')
-		original_stdout = sys.stdout
-		sys.stdout = file
+	else:
+
+		fl.forma_print('Preparing analysis of trace.')
+
+		exec_summary = fp.forma_parse_traces(tracefiles)
+
+		total_callbacks = np.sum(exec_summary.callcount_per_opcode)
+		if total_callbacks == 0:
+			fl.forma_error('Zero callbacks detected. Make sure you are using well-formatted SST Dumpi output files.')
+			sys.exit(1)
+		total_rmas = exec_summary.callcount_per_opcode[GET]+exec_summary.callcount_per_opcode[PUT]+exec_summary.callcount_per_opcode[ACC]
+		if total_rmas== 0:
+			fl.forma_error('Zero RMA callbacks detected. Make sure you are profiling traces of an RMA-based application.')
+			sys.exit(1)
+		if total_ranks != exec_summary.ranks:
+			fl.forma_error('Rank discrepancy: Different total rank number in execution than number of trace files.')
+			sys.exit(1)
+		rma_pc = round((total_rmas/total_callbacks)*100, 2)
+		total_synch = exec_summary.callcount_per_opcode[FENCE]
+		synch_pc = round((total_synch/total_callbacks)*100, 2)
+		total_win = exec_summary.callcount_per_opcode[WIN_CR]+exec_summary.callcount_per_opcode[WIN_FREE]
+		if exec_summary.callcount_per_opcode[WIN_CR] != exec_summary.callcount_per_opcode[WIN_FREE]:
+			fl.forma_error('Discrepancy between MPI_Win_create/MPI_Win_free call counts. Make sure you are using well-formatted SST Dumpi output files.')
+			sys.exit(1)
+		if total_win== 0:
+			fl.forma_error('Zero MPI_Win_create detected. Currently, foRMA only supports MPI_Win_create/MPI_Win_free -based window creation.')
+			sys.exit(1)
+		win_pc = round((total_win/total_callbacks)*100, 2)
+
+		fl.forma_print(f'Handled {total_callbacks} callbacks during the parsing of {exec_summary.ranks} trace files.\n' +
+			f'\t    Out of those, {total_rmas} (i.e. {rma_pc}% of callbacks) refer to remote memory accesses.\n' +
+			f'\t    Out of those, {total_synch} (i.e. {synch_pc}% of callbacks) refer to fence synchronization.\n'+
+			f'\t    Out of those, {total_win} (i.e. {win_pc}% of callbacks) refer to window creation/destruction.\n')
+		
+		with open(summaryfile, 'w') as file:
+			file.write(f'Handled {total_callbacks} callbacks during the parsing of {exec_summary.ranks} trace files.\n' +
+			f'\t    Out of those, {total_rmas} (i.e. {rma_pc}% of callbacks) refer to remote memory accesses.\n' +
+			f'\t    Out of those, {total_synch} (i.e. {synch_pc}% of callbacks) refer to fence synchronization.\n'+
+			f'\t    Out of those, {total_win} (i.e. {win_pc}% of callbacks) refer to window creation/destruction.\n')
+			original_stdout = sys.stdout
+			sys.stdout = file
+			exec_summary.print_summary()
+			sys.stdout = original_stdout
+
 		exec_summary.print_summary()
-		sys.stdout = original_stdout
-
-	exec_summary.print_summary()
 
 
 
@@ -212,14 +231,16 @@ def main():
 			sys.exit()
 		elif action == 'e': #
 			fl.forma_print('Preparing results...')
-			err = fa.forma_aggregate_epoch_files(exec_summary.ranks)
+			#err = fa.forma_aggregate_epoch_files(exec_summary.ranks)
+			err = fa.forma_aggregate_epoch_files(total_ranks)
 			if err == 2:
 				fl.forma_error('Window ID discrepancy among files. Make sure you are using well-formatted SST Dumpi output files.')
 				sys.exit(2)
 			fl.forma_print('Statistics per epoch (fence-based synchronization) can be found in file forma_out/epochs.txt\n')
 		elif action == 'f':
 			fl.forma_print('Preparing results...')
-			err = fa.forma_aggregate_fence_arrivals(exec_summary.ranks)
+			#err = fa.forma_aggregate_fence_arrivals(exec_summary.ranks)
+			err = fa.forma_aggregate_fence_arrivals(total_ranks)
 			if err == 2:
 			 	fl.forma_error('Window ID discrepancy among files. Make sure you are using well-formatted SST Dumpi output files.')
 			 	sys.exit(2)
@@ -245,14 +266,16 @@ def main():
 			fl.forma_print('Time spent in calls (per rank), as well as data transfer bounds, can be found in file forma_out/calls.txt\n')
 		elif action == 'r':
 			try:
-				rank_id = int(input(f'Please select rank ID [0 - {exec_summary.ranks-1}]: '))
+				#rank_id = int(input(f'Please select rank ID [0 - {exec_summary.ranks-1}]: '))
+				rank_id = int(input(f'Please select rank ID [0 - {total_ranks-1}]: '))
 				# if rank_input.isnumeric():
 				#     rank_id = int(rank_input)
 			except ValueError:
 				#if isinstance(rank_input, (str)):
 				fl.forma_error('Invalid rank ID!')
 				continue
-			if rank_id not in range(0, exec_summary.ranks):
+			#if rank_id not in range(0, exec_summary.ranks):
+			if rank_id not in range(0, total_ranks):
 			    fl.forma_error('Invalid rank ID!')
 			    continue
 			fl.forma_print(f'Summary for rank {rank_id}\n')
@@ -293,14 +316,17 @@ def main():
 				resource_string = importlib.resources.files('forma.schemas').joinpath('summary.avsc')
 				with importlib.resources.as_file(resource_string) as resource:
 					schema = avro.schema.parse(open(resource, "rb").read())
-				for rank_id in range(0, exec_summary.ranks):
+				#for rank_id in range(0, exec_summary.ranks):
+				for rank_id in range(0, total_ranks):
 					epochsumfile = "./forma_meta/"+format(str(timestamp))+"/epochs-"+str(rank_id)+".avro"
 					reader = DataFileReader(open(epochsumfile, "rb"), DatumReader(schema))
 					for rid, summary in enumerate(reader):
 						epoch_summary.set_from_dict(summary)
 						epoch_summary.print_summary()
 					reader.close()
-				fa.forma_aggregate_epoch_files(exec_summary.ranks)
+				#fa.forma_aggregate_epoch_files(exec_summary.ranks)
+				fa.forma_aggregate_epoch_files(total_ranks)
+
 
 			with open("forma_out/"+format(str(timestamp))+"/fences.txt", 'w') as f:
 				sys.stdout = f # Change the standard output to the file we created.

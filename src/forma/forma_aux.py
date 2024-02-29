@@ -76,7 +76,7 @@ def check_filepaths(dirname, timestamp):
 	if total_file_size == 0:
 		fl.forma_print('Trace file size is 0. Make sure that you are using well-formatted SST Dumpi output files.')
 		sys.exit(2)
-	fl.forma_print(f'About to parse a total of {total_file_size} KBytes of binary trace files size.\n')
+	fl.forma_print(f'Total trace size: {total_file_size} KBytes of binary trace files.\n')
 
 	## Read metafile and print it -- TODO: to be used more extensively later
 	try:
@@ -84,10 +84,10 @@ def check_filepaths(dirname, timestamp):
 	except FileNotFoundError:
 		fl.forma_print('.meta file not found. Check directory name and timestamp formatting.\n')
 		#sys.exit(1)
-		return None
+		return None, 0
 
 
-	return(ordered_files)
+	return(ordered_files, len(ordered_files))
 
 
 def forma_aggregate_epoch_files(rank_nr):
