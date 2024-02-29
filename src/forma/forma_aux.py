@@ -93,7 +93,7 @@ def forma_aggregate_epoch_files(rank_nr):
 	epoch_count = -1
 	epoch_summary = fc.epochSummary()
 	# schema = avro.schema.parse(open("../schemas/summary.avsc", "rb").read())
-	resource_string = importlib.resources.files('forma.schemas').joinpath('summary.avsc')
+	resource_string = importlib.resources.files('forma.schemas').joinpath('epochstats.avsc')
 	with importlib.resources.as_file(resource_string) as resource:
 		schema = avro.schema.parse(open(resource, "rb").read())
 	epochfiles = []
@@ -183,7 +183,7 @@ def forma_aggregate_fence_arrivals(rank_nr):
 	epoch_count = -1
 	epoch_summary = fc.epochSummary()
 	# schema = avro.schema.parse(open("../schemas/summary.avsc", "rb").read())
-	resource_string = importlib.resources.files('forma.schemas').joinpath('summary.avsc')
+	resource_string = importlib.resources.files('forma.schemas').joinpath('epochstats.avsc')
 	with importlib.resources.as_file(resource_string) as resource:
 		schema = avro.schema.parse(open(resource, "rb").read())
 	epochfiles = []
@@ -209,7 +209,7 @@ def forma_aggregate_fence_arrivals(rank_nr):
 	original_stdout = sys.stdout # Save a reference to the original standard output
 	with open('forma_out/fences.txt', 'w') as f:
 		sys.stdout = f # Change the standard output to the file we created.
-		aggregate_epoch_summary = fc.epochSummary()
+		#aggregate_epoch_summary = fc.epochSummary()
 		while(keep_reading):
 			for rank_id in range(0, rank_nr): # for each rank, go through all epochs, window after window
 				# check for window concordance
