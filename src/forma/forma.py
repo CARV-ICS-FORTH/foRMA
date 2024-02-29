@@ -220,9 +220,10 @@ def main():
 			resource_string = importlib.resources.files('forma.schemas').joinpath('summary.avsc')
 			with importlib.resources.as_file(resource_string) as resource:
 				schema = avro.schema.parse(open(resource, "rb").read())
-			reader = DataFileReader(open("forma_meta/rank_summaries.avro", "rb"), DatumReader(schema))
+			#reader = DataFileReader(open("forma_meta/rank_summaries.avro", "rb"), DatumReader(schema))
+			reader = DataFileReader(open("forma_meta/"+format(str(timestamp))+"/rank_summaries.avro", "rb"), DatumReader(schema))
 			original_stdout = sys.stdout # Save a reference to the original standard output
-			with open('forma_out/calls.txt', 'w') as f:
+			with open("forma_out/"+format(str(timestamp))+"/calls.txt", 'w') as f:
 				sys.stdout = f # Change the standard output to the file we created.
 				for rid, summary in enumerate(reader):
 					print(f'------------------------------------ RANK {rid} ---------------------------------------------')
@@ -249,7 +250,7 @@ def main():
 			resource_string = importlib.resources.files('forma.schemas').joinpath('summary.avsc')
 			with importlib.resources.as_file(resource_string) as resource:
 				schema = avro.schema.parse(open(resource, "rb").read())
-			reader = DataFileReader(open("forma_meta/rank_summaries.avro", "rb"), DatumReader(schema))
+			reader = DataFileReader(open("forma_meta/"+format(str(timestamp))+"/rank_summaries.avro", "rb"), DatumReader(schema))
 			for rid, summary in enumerate(reader):
 				if rid == rank_id:
 					rank_summary.set_from_dict(summary)
@@ -265,15 +266,15 @@ def main():
 			resource_string = importlib.resources.files('forma.schemas').joinpath('summary.avsc')
 			with importlib.resources.as_file(resource_string) as resource:
 				schema = avro.schema.parse(open(resource, "rb").read())
-			reader = DataFileReader(open("forma_meta/rank_summaries.avro", "rb"), DatumReader(schema))
-			with open('forma_out/calls.txt', 'w') as f:
+			reader = DataFileReader(open("forma_meta/"+format(str(timestamp))+"/rank_summaries.avro", "rb"), DatumReader(schema))
+			with open("forma_out/"+format(str(timestamp))+"/calls.txt", 'w') as f:
 				sys.stdout = f # Change the standard output to the file we created.
 				for rid, summary in enumerate(reader):
 					rank_summary.set_from_dict(summary)
 					rank_summary.print_summary()
 				reader.close()
 
-			with open('forma_out/epochs.txt', 'w') as f:
+			with open("forma_out/"+format(str(timestamp))+"/epochs.txt", 'w') as f:
 				sys.stdout = f # Change the standard output to the file we created.
 
 				epoch_summary = fc.epochSummary()
@@ -282,7 +283,7 @@ def main():
 				with importlib.resources.as_file(resource_string) as resource:
 					schema = avro.schema.parse(open(resource, "rb").read())
 				for rank_id in range(0, exec_summary.ranks):
-					epochsumfile = "./forma_meta/epochs-"+str(rank_id)+".avro"
+					epochsumfile = "./forma_meta/"+format(str(timestamp))+"/epochs-"+str(rank_id)+".avro"
 					reader = DataFileReader(open(epochsumfile, "rb"), DatumReader(schema))
 					for rid, summary in enumerate(reader):
 						epoch_summary.set_from_dict(summary)
@@ -290,7 +291,7 @@ def main():
 					reader.close()
 				fa.forma_aggregate_epoch_files(exec_summary.ranks)
 
-			with open('forma_out/fences.txt', 'w') as f:
+			with open("forma_out/"+format(str(timestamp))+"/fences.txt", 'w') as f:
 				sys.stdout = f # Change the standard output to the file we created.
 				
 			sys.stdout = original_stdout # Reset the standard output to its original value
