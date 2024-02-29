@@ -85,6 +85,7 @@ def main():
 	forma_arg_parse.add_argument("-e", "--epochs", help="Produce statistics per epoch (fence-based synchronization), output to file forma_out/epochs.txt", action="store_true")
 	forma_arg_parse.add_argument("-f", "--fences", help="Produce fence statistics, output to file forma_out/fences.txt.", action="store_true")
 	forma_arg_parse.add_argument("-m", "--meta", help="Access submenu that works on SST Dumpi meta-data for the trace.", action="store_true")
+	forma_arg_parse.add_argument("-r", "--rh", help="Prints correspondence of rank to hostname to file forma_out/hosts.txt.", action="store_true")
 
 
 	## ... and get the required parameters from the command-line arguments
@@ -95,6 +96,7 @@ def main():
 	# dt_summary = args.transfers
 	fg.transfers = args.transfers
 	go_meta = args.meta
+	hosts = args.rh
 
 
 	fl.forma_intro()
@@ -145,6 +147,16 @@ def main():
 		sys.exit(-1)
 
 	metafile =  format(str(dirname))+'/'+format(str('dumpi-'+format(str(timestamp))+'.meta'))
+
+	if hosts:
+		hostfile = fg.outdir+"hosts.txt"
+		with open(hostfile, 'w') as file:
+
+			original_stdout = sys.stdout
+			sys.stdout = file
+			fa.rank_to_host(tracefiles)
+			sys.stdout = original_stdout
+
 
 
 ################ Stage #0 ends here ########################################
@@ -334,6 +346,15 @@ def main():
 			sys.stdout = original_stdout # Reset the standard output to its original value
 			#fl.forma_print('Full analysis broken down per ranks and per windows can be found in files epochs.txt, fences.txt, and calls.txt\n')
 			fl.forma_print('Full analysis broken down per ranks and per windows can be found in files epochs.txt and calls.txt in directory forma_out/\n')
+		elif action == 'h':
+			hostfile = fg.outdir+"hosts.txt"
+			if not os.path.exists(hostfile):
+				fa.rank_to_host(tracefiles)
+			else:
+				with open(hostfile, 'r') as file:
+					ranks_to_hosts = file.read()
+					print(ranks_to_hosts)
+
 		elif action == 'p':
 			pass
 		else:

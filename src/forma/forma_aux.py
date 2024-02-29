@@ -34,6 +34,7 @@ from pydumpi import DumpiTrace
 from pydumpi import util
 
 
+import forma.forma_trace as ft
 import forma.forma_logging as fl
 import forma.forma_classes as fc
 import forma.forma_config as fg
@@ -88,6 +89,17 @@ def check_filepaths(dirname, timestamp):
 
 
 	return(ordered_files, len(ordered_files))
+
+
+def rank_to_host(tracefiles):
+
+	for rank, tracefile in enumerate(tracefiles):
+		with ft.FormaSTrace(tracefile, rank) as trace:
+			header = trace.read_header().hostname.decode('utf-8')
+			print(f'Rank {rank}: {header}')
+
+	return 0
+
 
 
 def forma_aggregate_epoch_files(rank_nr):
