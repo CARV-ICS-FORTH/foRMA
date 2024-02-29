@@ -157,8 +157,7 @@ class FormaSTrace(DumpiTrace):
 		#cpu_duration = (cpu_time.stop - cpu_time.start).to_ns()
 
 		fence_arrival = wall_time.start.to_ns() - self.wc_bias
-		print(f'Wall start time is {wall_time.start.to_ns()} and fence_arrival is {fence_arrival}.')
-
+		
 		## identify window key to use on windows dictionary by looking into wintb
 		try:
 			win_id = self.wintb[data.win]
@@ -182,14 +181,9 @@ class FormaSTrace(DumpiTrace):
 		self.epochcount_per_window[win_id]+=1
 		self.epoch_stats_for_win[win_id].win_id = win_id
 		self.epoch_stats_for_win[win_id].epoch_nr = self.epochcount_per_window[win_id]
-		print(f'arrival BEFORE assignment: {self.epoch_stats_for_win[win_id].arrival}')
 		self.epoch_stats_for_win[win_id].arrival = fence_arrival
-		print(f'arrival AFTER assignment: {self.epoch_stats_for_win[win_id].arrival}')
-		
-		print(f'Wall time to nanosecond: {wall_time.start.to_ns()}')
-		print(f'Fence arrival: {fence_arrival}')
-		
-		print(f'forma trace: fence arrival in epoch {self.epochcount_per_window[win_id]} for window {win_id} is {self.epoch_stats_for_win[win_id].arrival}')
+				
+		# print(f'forma trace: fence arrival in epoch {self.epochcount_per_window[win_id]} for window {win_id} is {self.epoch_stats_for_win[win_id].arrival}')
 
 		## brief debug print, for reassurance...
 		# print(f'Window is {self.epoch_stats_for_win[win_id].win_id}, epoch is {self.epochcount_per_window[win_id]}')
@@ -226,7 +220,6 @@ class FormaSTrace(DumpiTrace):
 		## the windows were created. 
 		if win_id == self.curr_win_to_file:
 			# dump to avro file and reset 
-			print(f'Fence: arrival value to be written to file is {copy.copy(fence_arrival)}')
 			self.writer.append({"win_id": self.epoch_stats_for_win[win_id].win_id, 
 				"epoch_nr": self.epochcount_per_window[win_id], 
 				"arrival" : fence_arrival,
@@ -376,7 +369,7 @@ class FormaSTrace(DumpiTrace):
 
 				if stashed_id != self.curr_win_to_file:
 
-					print(f'foRMA PRINTING STASHED WINDOW DATA to file for win {stashed_id}')
+					#print(f'foRMA PRINTING STASHED WINDOW DATA to file for win {stashed_id}')
 					epoch_stash = self.win_epochs_buffer.get(stashed_id)
 					if epoch_stash:
 						for epochstats in epoch_stash:

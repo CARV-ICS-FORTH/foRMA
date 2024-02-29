@@ -105,7 +105,7 @@ def forma_aggregate_epoch_files(rank_nr):
 		epochsumfile = "./forma_meta/epochs-"+str(rank_id)+".avro"
 		epochfiles.append(epochsumfile)
 		readers.append(DataFileReader(open(epochsumfile, "rb"), DatumReader(schema)))
-		next(readers[rank_id])
+		#next(readers[rank_id])
 		# offsets.append(1)
 		# if epoch_cnt == 0:
 		# 	epoch_cnt = sum(1 for line in readers[rank_id])
@@ -195,7 +195,7 @@ def forma_aggregate_fence_arrivals(rank_nr):
 		epochsumfile = "./forma_meta/epochs-"+str(rank_id)+".avro"
 		epochfiles.append(epochsumfile)
 		readers.append(DataFileReader(open(epochsumfile, "rb"), DatumReader(schema)))
-		next(readers[rank_id])
+		#next(readers[rank_id])
 
 	arrivals = np.zeros(rank_nr)
 	epoch = 0
@@ -243,7 +243,6 @@ def forma_aggregate_fence_arrivals(rank_nr):
 
 			curr_win = rank_win
 			# check for window change
-			print(f'current win: {curr_win}. previous win: {prev_win}')
 			if curr_win != prev_win:
 				print('------------------------------------------------------------------------------------------\n' + 
 					f'-------------------------------- WINDOW {curr_win} ---------------------------------------------\n' + 
@@ -251,10 +250,10 @@ def forma_aggregate_fence_arrivals(rank_nr):
 			# aggregate_epoch_summary.print_summary()
 			epoch = epoch_summary.epoch_nr
 			print(f'----------------------------- FENCE ARRIVALS for EPOCH {epoch} ------------------------------------------\n')
-			print(f'ALL: {arrivals}')
+			#print(f'ALL: {arrivals}\n')
 			first = np.min(arrivals)
 			last = np.max(arrivals)
-			print(f'First (rank): {first} ({np.argmin(arrivals)}) | Last (rank) : {last} ({np.argmax(arrivals)}) | Difference: {(last-first)} nsec')
+			print(f'First [ timestamp (rank) ]: {first} nsec ({np.argmin(arrivals)}) | Last [ timestamp (rank) ] : {last} nsec ({np.argmax(arrivals)}) | Difference: {(last-first)} nsec\n')
 			prev_win = curr_win
 			#
 			# aggregate_epoch_summary.reset()
