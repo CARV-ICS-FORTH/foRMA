@@ -98,6 +98,7 @@ def main():
 	cmdln_mode = args.summary
 	# dt_summary = args.transfers
 	fg.transfers = args.transfers
+	go_meta = args.meta
 
 
 	if args.debug:
@@ -147,9 +148,9 @@ def main():
 
 ################ Stage #0 ends here ########################################
 
-	#os.system("exec 2> /dev/null")
 	exec_summary = fp.forma_parse_traces(tracefiles)
-	#os.system("exec 2>1")
+
+	summaryfile = fg.outdir+"exec_summary.txt"
 
 	total_callbacks = np.sum(exec_summary.callcount_per_opcode)
 	if total_callbacks == 0:
@@ -175,6 +176,16 @@ def main():
 		f'\t    Out of those, {total_rmas} (i.e. {rma_pc}% of callbacks) refer to remote memory accesses.\n' +
 		f'\t    Out of those, {total_synch} (i.e. {synch_pc}% of callbacks) refer to fence synchronization.\n'+
 		f'\t    Out of those, {total_win} (i.e. {win_pc}% of callbacks) refer to window creation/destruction.\n')
+	
+	with open(summaryfile, 'w') as file:
+		file.write(f'Handled {total_callbacks} callbacks during the parsing of {exec_summary.ranks} trace files.\n' +
+		f'\t    Out of those, {total_rmas} (i.e. {rma_pc}% of callbacks) refer to remote memory accesses.\n' +
+		f'\t    Out of those, {total_synch} (i.e. {synch_pc}% of callbacks) refer to fence synchronization.\n'+
+		f'\t    Out of those, {total_win} (i.e. {win_pc}% of callbacks) refer to window creation/destruction.\n')
+		original_stdout = sys.stdout
+		sys.stdout = file
+		exec_summary.print_summary()
+		sys.stdout = original_stdout
 
 	exec_summary.print_summary()
 
