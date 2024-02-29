@@ -51,6 +51,8 @@ class FormaSTrace(DumpiTrace):
 		self.trace_summary = fc.formaSummary()
 		#self.trace_summary.setRanks(1)
 		
+		self.rankID = rank
+		self.wc_bias = 0
 
 		## Window metrics are indexed by window ID but something strange is going on with 
 		## sst dumpi window id numbers, so I'm using a window id lookaside translation buffer
@@ -95,6 +97,7 @@ class FormaSTrace(DumpiTrace):
 
 	def on_init(self, data, thread, cpu_time, wall_time, perf_info):
 		#time_diff = wall_time.stop - wall_time.start
+		self.wc_bias = wall_time.stop.to_ns()
 		
 		#self.total_exec_time = cpu_time.start.to_ns()
 		#self.total_exec_time = wall_time.start.to_ns()
@@ -105,6 +108,9 @@ class FormaSTrace(DumpiTrace):
 		## to get the total execution time of the rank for this trace
 		self.trace_summary.exectime[0] = wall_time.start.to_ns()
 		self.trace_summary.ranks += 1 
+
+		# if self._profile:
+		# 	print('Profile accessed')
 
 
 	def on_finalize(self, data, thread, cpu_time, wall_time, perf_info):
@@ -150,6 +156,8 @@ class FormaSTrace(DumpiTrace):
 		wall_duration = (wall_time.stop - wall_time.start).to_ns()
 		#cpu_duration = (cpu_time.stop - cpu_time.start).to_ns()
 
+		fence_arrival = wall_time.start.to_ns() - self.wc_bias
+		print(f'Wall start time is {wall_time.start.to_ns()} and fence_arrival is {fence_arrival}.')
 
 		## identify window key to use on windows dictionary by looking into wintb
 		try:
@@ -174,6 +182,14 @@ class FormaSTrace(DumpiTrace):
 		self.epochcount_per_window[win_id]+=1
 		self.epoch_stats_for_win[win_id].win_id = win_id
 		self.epoch_stats_for_win[win_id].epoch_nr = self.epochcount_per_window[win_id]
+		print(f'arrival BEFORE assignment: {self.epoch_stats_for_win[win_id].arrival}')
+		self.epoch_stats_for_win[win_id].arrival = fence_arrival
+		print(f'arrival AFTER assignment: {self.epoch_stats_for_win[win_id].arrival}')
+		
+		print(f'Wall time to nanosecond: {wall_time.start.to_ns()}')
+		print(f'Fence arrival: {fence_arrival}')
+		
+		print(f'forma trace: fence arrival in epoch {self.epochcount_per_window[win_id]} for window {win_id} is {self.epoch_stats_for_win[win_id].arrival}')
 
 		## brief debug print, for reassurance...
 		# print(f'Window is {self.epoch_stats_for_win[win_id].win_id}, epoch is {self.epochcount_per_window[win_id]}')
@@ -210,9 +226,10 @@ class FormaSTrace(DumpiTrace):
 		## the windows were created. 
 		if win_id == self.curr_win_to_file:
 			# dump to avro file and reset 
+			print(f'Fence: arrival value to be written to file is {copy.copy(fence_arrival)}')
 			self.writer.append({"win_id": self.epoch_stats_for_win[win_id].win_id, 
 				"epoch_nr": self.epochcount_per_window[win_id], 
-				"arrival" : wall_time.start.to_ns(),
+				"arrival" : fence_arrival,
 				"mpi_gets": int(self.epoch_stats_for_win[win_id].callcount_per_opcode[GET]), 
 				"mpi_puts": int(self.epoch_stats_for_win[win_id].callcount_per_opcode[PUT]), 
 				"mpi_accs": int(self.epoch_stats_for_win[win_id].callcount_per_opcode[ACC]), 
@@ -359,10 +376,11 @@ class FormaSTrace(DumpiTrace):
 
 				if stashed_id != self.curr_win_to_file:
 
-		#			print(f'foRMA PRINTING STASHED WINDOW DATA to file for win {stashed_id}')
+					print(f'foRMA PRINTING STASHED WINDOW DATA to file for win {stashed_id}')
 					epoch_stash = self.win_epochs_buffer.get(stashed_id)
 					if epoch_stash:
 						for epochstats in epoch_stash:
+							# print(f'arrival is : {epochstats.arrival}')
 							self.writer.append({"win_id": epochstats.win_id, 
 								"epoch_nr": epochstats.epoch_nr, 
 								"arrival" : epochstats.arrival,

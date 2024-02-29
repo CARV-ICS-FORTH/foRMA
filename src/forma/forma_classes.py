@@ -218,11 +218,13 @@ class epochSummary:
 		self.opdurations	= np.zeros((3, 4), dtype=float)	# tracking 3 opcodes, 4 statistics for each
 		self.xfer_per_opcode	= np.zeros(3, dtype=float)	# 4 statistics for transfer sizes, tracking 3 opcodes
 		self.dtbounds		= np.zeros((3, 6), dtype=float)	#  -"-
+		self.arrival		= 0	
 
 	def set_from_dict(self, dict):
 		self.initialized	= 1
 		self.win_id			= dict["win_id"]
 		self.epoch_nr		= dict["epoch_nr"]
+		self.arrival		= dict["arrival"]
 		self.callcount_per_opcode[GET]	= dict["mpi_gets"]
 		self.callcount_per_opcode[PUT]	= dict["mpi_puts"]
 		self.callcount_per_opcode[ACC]	= dict["mpi_accs"]

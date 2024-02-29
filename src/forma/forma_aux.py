@@ -197,6 +197,74 @@ def forma_aggregate_fence_arrivals(rank_nr):
 		readers.append(DataFileReader(open(epochsumfile, "rb"), DatumReader(schema)))
 		next(readers[rank_id])
 
+	arrivals = np.zeros(rank_nr)
+	epoch = 0
+
+	keep_reading = True
+	curr_win = 0
+	prev_win = -1
+	rank_win = 0
+	prev_rank_win = 0
+	iteration = 0
+	original_stdout = sys.stdout # Save a reference to the original standard output
+	with open('forma_out/fences.txt', 'w') as f:
+		sys.stdout = f # Change the standard output to the file we created.
+		aggregate_epoch_summary = fc.epochSummary()
+		while(keep_reading):
+			for rank_id in range(0, rank_nr): # for each rank, go through all epochs, window after window
+				# check for window concordance
+				#readers[rank_id].reader.seek(offsets[rank_id])
+				try:
+					summary = next(readers[rank_id])
+				except StopIteration:
+					#print('EXCEPT STOP ITERATION')
+					keep_reading = False
+					break
+				epoch_summary.set_from_dict(summary)
+
+				rank_win = epoch_summary.win_id
+				if rank_win != prev_rank_win and rank_id != 0:
+					# handle error at higher level
+					# fl.forma_error('Window ID discrepancy among files. Make sure you are using well-formatted SST Dumpi output files.')
+					sys.stdout = original_stdout # Reset the standard output to its original value
+					print(f'ITERATION {iteration}: ERROR AT RANK id {rank_id}: curr win {curr_win}, prev win {prev_win}, rank win {rank_win}, prev rank win {prev_rank_win}')
+					return 2
+
+				# aggregate_epoch_summary += epoch_summary
+				# aggregate_epoch_summary.set_averages()
+				arrivals[rank_id] = epoch_summary.arrival
+				# print(f'Rank {rank_id} arrival from epoch summary: {epoch_summary.arrival}')
+				# print(f'Rank {rank_id} arrival: {arrivals[rank_id]}')
+				prev_rank_win = rank_win
+
+			if keep_reading == False:
+				#print('KEEP READING IS FALSE')
+				break
+
+			curr_win = rank_win
+			# check for window change
+			print(f'current win: {curr_win}. previous win: {prev_win}')
+			if curr_win != prev_win:
+				print('------------------------------------------------------------------------------------------\n' + 
+					f'-------------------------------- WINDOW {curr_win} ---------------------------------------------\n' + 
+					'------------------------------------------------------------------------------------------\n')
+			# aggregate_epoch_summary.print_summary()
+			epoch = epoch_summary.epoch_nr
+			print(f'----------------------------- FENCE ARRIVALS for EPOCH {epoch} ------------------------------------------\n')
+			print(f'ALL: {arrivals}')
+			first = np.min(arrivals)
+			last = np.max(arrivals)
+			print(f'First (rank): {first} ({np.argmin(arrivals)}) | Last (rank) : {last} ({np.argmax(arrivals)}) | Difference: {(last-first)} nsec')
+			prev_win = curr_win
+			#
+			# aggregate_epoch_summary.reset()
+			arrivals.fill(0)
+			#
+			iteration += 1
+	sys.stdout = original_stdout # Reset the standard output to its original value
+	return 0
+
+
 	fl.forma_print(f'Aggregating results from {rank_nr} meta-files.')
 
 	return 0
