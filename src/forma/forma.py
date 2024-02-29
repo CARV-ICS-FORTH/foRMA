@@ -110,10 +110,10 @@ def main():
 	fl.forma_logger.debug(f'Directory name is : {dirname}')
 	fl.forma_logger.debug(f'Timestamp is {timestamp}')
 
-	# if not os.path.exists(fg.metadir):
-	# 	os.mkdir(fg.metadir)
-	# if not os.path.exists(fg.outdir):
-	# 	os.mkdir(fg.outdir)
+	if not os.path.exists(fg.metadir):
+		os.mkdir(fg.metadir)
+	if not os.path.exists(fg.outdir):
+		os.mkdir(fg.outdir)
 
 	fg.outdir = fg.outdir+format(str(timestamp))+'/'
 	fg.metadir = fg.metadir+format(str(timestamp))+'/'
