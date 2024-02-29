@@ -82,15 +82,18 @@ class FormaSTrace(DumpiTrace):
 		self.stashed_closed_win_ids = set()
 		
 		## creating all necessary avro file book-keeping 
-		if not os.path.exists('./forma_meta/'):
-			os.mkdir('./forma_meta/')
+		# if not os.path.exists('./forma_meta/'):
+		# 	os.mkdir('./forma_meta/')
+		if not os.path.exists(fg.metadir):
+		 	os.mkdir(fg.metadir)
 
 		#resource_string = importlib.resources.path("forma", 'schemas/epochstats.avsc')
 		# schema = avro.schema.parse(open("schemas/epochstats.avsc", "rb").read())
 		resource_string = importlib.resources.files('forma.schemas').joinpath('epochstats.avsc')
 		with importlib.resources.as_file(resource_string) as resource:
 			schema = avro.schema.parse(open(resource, "rb").read())
-		epochfilename = "./forma_meta/epochs-"+str(rank)+".avro"
+		#epochfilename = "./forma_meta/epochs-"+str(rank)+".avro"
+		epochfilename = fg.metadir+"epochs-"+str(rank)+".avro"
 		self.writer = DataFileWriter(open(epochfilename, "wb"), DatumWriter(), schema)
 
 

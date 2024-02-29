@@ -36,6 +36,7 @@ from pydumpi import util
 
 import forma.forma_logging as fl
 import forma.forma_classes as fc
+import forma.forma_config as fg
 
 import avro.schema
 from avro.datafile import DataFileReader, DataFileWriter
@@ -101,8 +102,14 @@ def forma_aggregate_epoch_files(rank_nr):
 	offsets = []
 	epoch_cnt = 0
 	curr_lines = 0
+
+	#mydir =  "./forma_meta/epochs-"+format(str(timestamp))+"/"
+	if not os.path.exists(fg.metadir):
+		os.mkdir(fg.metadir)
+
 	for rank_id in range(0, rank_nr):
-		epochsumfile = "./forma_meta/epochs-"+str(rank_id)+".avro"
+		#epochsumfile = "./forma_meta/"+format(str(timestamp))+"/epochs-"+str(rank_id)+".avro"
+		epochsumfile = fg.metadir+"/epochs-"+str(rank_id)+".avro"
 		epochfiles.append(epochsumfile)
 		readers.append(DataFileReader(open(epochsumfile, "rb"), DatumReader(schema)))
 		#next(readers[rank_id])
@@ -127,7 +134,12 @@ def forma_aggregate_epoch_files(rank_nr):
 	prev_rank_win = 0
 	iteration = 0
 	original_stdout = sys.stdout # Save a reference to the original standard output
-	with open('forma_out/epochs.txt', 'w') as f:
+	#epoch_dir ="forma_out/"+format(str(timestamp))
+	if not os.path.exists(fg.outdir):
+		os.mkdir(fg.outdir)
+	epochfile = fg.outdir+"/epochs.txt"
+	#with open('forma_out/epochs.txt', 'w') as f:
+	with open(epochfile, 'w') as f:	
 		sys.stdout = f # Change the standard output to the file we created.
 		aggregate_epoch_summary = fc.epochSummary()
 		while(keep_reading):
@@ -191,10 +203,15 @@ def forma_aggregate_fence_arrivals(rank_nr):
 	offsets = []
 	epoch_cnt = 0
 	curr_lines = 0
+
+	#mydir =  "./forma_meta/epochs-"+format(str(timestamp))+"/"
+	if not os.path.exists(fg.metadir):
+		os.mkdir(fg.metadir)
+
 	for rank_id in range(0, rank_nr):
-		epochsumfile = "./forma_meta/epochs-"+str(rank_id)+".avro"
-		epochfiles.append(epochsumfile)
-		readers.append(DataFileReader(open(epochsumfile, "rb"), DatumReader(schema)))
+		epochsummaryfile = fg.metadir+"/epochs-"+str(rank_id)+".avro"
+		epochfiles.append(epochsummaryfile)
+		readers.append(DataFileReader(open(epochsummaryfile, "rb"), DatumReader(schema)))
 		#next(readers[rank_id])
 
 	arrivals = np.zeros(rank_nr)
@@ -207,7 +224,12 @@ def forma_aggregate_fence_arrivals(rank_nr):
 	prev_rank_win = 0
 	iteration = 0
 	original_stdout = sys.stdout # Save a reference to the original standard output
-	with open('forma_out/fences.txt', 'w') as f:
+	#fence_dir ="forma_out/"+format(str(timestamp))
+	if not os.path.exists(fg.outdir):
+		os.mkdir(fg.outdir)
+	fencefile = fg.outdir+"/fences.txt"
+	#with open('forma_out/fences.txt', 'w') as f:
+	with open(fencefile, 'w') as f:
 		sys.stdout = f # Change the standard output to the file we created.
 		#aggregate_epoch_summary = fc.epochSummary()
 		while(keep_reading):

@@ -41,6 +41,7 @@ import forma.forma_trace as ft
 import forma.forma_aux as fa
 import forma.forma_classes as fc
 import forma.forma_logging as fl
+import forma.forma_config as fg
 from forma.forma_constants import *
 
 
@@ -66,7 +67,9 @@ def forma_parse_traces(tracefiles):
 	resource_string = importlib.resources.files('forma.schemas').joinpath('summary.avsc')
 	with importlib.resources.as_file(resource_string) as resource:
 		schema = avro.schema.parse(open(resource, "rb").read())
-	writer = DataFileWriter(open("forma_meta/rank_summaries.avro", "wb"), DatumWriter(), schema)
+	writerfile = fg.metadir+"rank_summaries.avro"
+	#writer = DataFileWriter(open("forma_meta/rank_summaries.avro", "wb"), DatumWriter(), schema)
+	writer = DataFileWriter(open(writerfile, "wb"), DatumWriter(), schema)
 
 	for rank, tracefile in enumerate(tracefiles):
 		with ft.FormaSTrace(tracefile, rank) as trace:
@@ -122,7 +125,8 @@ def forma_parse_traces(tracefiles):
 	exec_summary.set_averages()
 
 	original_stdout = sys.stdout # Save a reference to the original standard output
-	with open('forma_out/windows.txt', 'w') as f:
+	windowfile = fg.outdir+"windows.txt"
+	with open(windowfile, 'w') as f:
 		sys.stdout = f # Change the standard output to the file we created.
 		for i, winsum in enumerate(window_summaries):
 			winsum.set_averages()

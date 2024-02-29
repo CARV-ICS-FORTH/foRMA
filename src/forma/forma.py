@@ -110,12 +110,24 @@ def main():
 	fl.forma_logger.debug(f'Directory name is : {dirname}')
 	fl.forma_logger.debug(f'Timestamp is {timestamp}')
 
+	# if not os.path.exists(fg.metadir):
+	# 	os.mkdir(fg.metadir)
+	# if not os.path.exists(fg.outdir):
+	# 	os.mkdir(fg.outdir)
+
+	fg.outdir = fg.outdir+format(str(timestamp))+'/'
+	fg.metadir = fg.metadir+format(str(timestamp))+'/'
+
+	if not os.path.exists(fg.metadir):
+		os.mkdir(fg.metadir)
+	if not os.path.exists(fg.outdir):
+		os.mkdir(fg.outdir)
+
+
 	tracefiles = fa.check_filepaths(dirname, timestamp)
 	if tracefiles == None:
 		fl.forma_print('No trace files found. Exiting.\n')
 		sys.exit(-1)
-
-
 
 	metafile =  format(str(dirname))+'/'+format(str('dumpi-'+format(str(timestamp))+'.meta'))
 
@@ -165,9 +177,6 @@ def main():
 		f'\t    Out of those, {total_win} (i.e. {win_pc}% of callbacks) refer to window creation/destruction.\n')
 
 	exec_summary.print_summary()
-
-	if not os.path.exists('./forma_out/'):
-		os.mkdir('./forma_out/')
 
 
 

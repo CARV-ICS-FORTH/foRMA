@@ -20,3 +20,5 @@ __author__ = "Lena Kanellou"
 __version__ = "0.1.0"
 
 transfers = 1
+metadir = "./forma_meta/"
+outdir = "./forma_out/"
