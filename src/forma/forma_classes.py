@@ -188,6 +188,7 @@ class formaSummary:
 		dtbounds_stats = []
 		for i in range(len(self.dtbounds)):
 			dtbounds_stats.append((self.dtbounds[i][0:4]).tolist())
+			#print(dtbounds_stats)
 		print('------------------------------------------------------------------------------------------\n' +
 		'-------------------------- Data Transfer Bounds ------------------------------------------\n')
 		fp.forma_print_stats_x4(["MPI_Get", "MPI_Put", "MPI_Accumulate"], dtbounds_stats, 0)

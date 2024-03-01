@@ -150,7 +150,9 @@ class FormaSTrace(DumpiTrace):
 		for opcode in (GET, PUT, ACC, FENCE, WIN_CR):
 			if self.trace_summary.callcount_per_opcode[opcode] != 0:
 				self.trace_summary.opdurations[opcode][AVG] = self.trace_summary.opdurations[opcode][AGR] / self.trace_summary.callcount_per_opcode[opcode]
-
+				if opcode != FENCE and opcode != WIN_CR:
+					self.trace_summary.dtbounds[opcode][AVG] = self.trace_summary.dtbounds[opcode][AGR] / self.trace_summary.callcount_per_opcode[opcode]
+					#print(f'printing average! >>> {self.trace_summary.dtbounds[opcode][AVG]}')
 
 		self.writer.close()
 
