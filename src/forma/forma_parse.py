@@ -27,7 +27,7 @@ import re
 import fnmatch
 
 import ctypes
-
+import time
 import logging
 
 from pydumpi import DumpiTrace
@@ -74,6 +74,9 @@ def forma_parse_traces(tracefiles):
 	for rank, tracefile in enumerate(tracefiles):
 		with ft.FormaSTrace(tracefile, rank) as trace:
 			fl.forma_print(f'Now parsing {tracefile}.\n')
+
+			# header = trace.read_header()
+			# fl.forma_print(f'Initial timestamp: {time.asctime(time.gmtime(header.starttime))}.')
 
 			trace.read_stream() ## this will activate the callbacks and the computations therein.
 

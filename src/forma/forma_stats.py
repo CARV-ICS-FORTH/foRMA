@@ -109,3 +109,11 @@ def forma_merge_stats_x4(current_stats, new_stats):
 	## update aggregate
 	#new_agr = current_stats[AGR] + new_val
 	current_stats[AGR] += new_stats[AGR]
+
+
+
+def forma_dict_stats_x2(values_dict, stats_vector):
+
+	stats_vector[MIN] = min(values_dict, key=values_dict.get)
+	stats_vector[MAX] = min(values_dict, key=values_dict.get)
+	

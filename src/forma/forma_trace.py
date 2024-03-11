@@ -53,6 +53,8 @@ class FormaSTrace(DumpiTrace):
 		
 		self.rankID = rank
 		self.wc_bias = 0
+		self.wc_bias_struct = dtypes.DumpiClock()
+		self.wc_offset = dtypes.DumpiClock()
 
 		## Window metrics are indexed by window ID but something strange is going on with 
 		## sst dumpi window id numbers, so I'm using a window id lookaside translation buffer
@@ -100,7 +102,7 @@ class FormaSTrace(DumpiTrace):
 
 	def on_init(self, data, thread, cpu_time, wall_time, perf_info):
 		#time_diff = wall_time.stop - wall_time.start
-		self.wc_bias = wall_time.stop.to_ns()
+		self.wc_offset = wall_time.stop.to_ns()
 		
 		#self.total_exec_time = cpu_time.start.to_ns()
 		#self.total_exec_time = wall_time.start.to_ns()
@@ -112,8 +114,15 @@ class FormaSTrace(DumpiTrace):
 		self.trace_summary.exectime[0] = wall_time.start.to_ns()
 		self.trace_summary.ranks += 1 
 
-		# if self._profile:
-		# 	print('Profile accessed')
+		if self._profile:
+			# print('Profile accessed')
+			# print(f'Profile info: {dir(self._profile.contents)}')
+			# print(f'Wall time offset: {self._profile.contents.wall_time_offset}')
+			self.wc_bias = self._profile.contents.wall_time_offset
+			# print(f'bias: {self.wc_bias}')
+			self.wc_bias_struct.sec = self.wc_bias
+			print(f'bias to ns: {self.wc_bias_struct.to_ns()}')
+			print(f'init bias a.k.a offset: {wall_time.stop.to_ns()}')
 
 
 	def on_finalize(self, data, thread, cpu_time, wall_time, perf_info):
@@ -161,7 +170,7 @@ class FormaSTrace(DumpiTrace):
 		wall_duration = (wall_time.stop - wall_time.start).to_ns()
 		#cpu_duration = (cpu_time.stop - cpu_time.start).to_ns()
 
-		fence_arrival = wall_time.start.to_ns() - self.wc_bias
+		fence_arrival = wall_time.start.to_ns() - self.wc_offset
 		
 		## identify window key to use on windows dictionary by looking into wintb
 		try:

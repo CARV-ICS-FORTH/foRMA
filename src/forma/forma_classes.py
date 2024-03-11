@@ -210,16 +210,22 @@ class epochSummary:
 		self.xfer_per_opcode	= np.zeros(3, dtype=float)	# 4 statistics for transfer sizes, tracking 3 opcodes
 		self.dtbounds		= np.zeros((3, 6), dtype=float)	#  -"-
 		self.arrival		= 0		# rank arrival to this fence
+		##
+		self.targetcount	= [{} for _ in range(3)]
+		##
 
 	def reset(self):
 		self.initialized	= 0
 		self.win_id			= 0
 		self.epoch_nr		= 0
-		self.callcount_per_opcode	= np.zeros(3, dtype=int) 	# tracking 3 opcodes
-		self.opdurations	= np.zeros((3, 4), dtype=float)	# tracking 3 opcodes, 4 statistics for each
-		self.xfer_per_opcode	= np.zeros(3, dtype=float)	# 4 statistics for transfer sizes, tracking 3 opcodes
-		self.dtbounds		= np.zeros((3, 6), dtype=float)	#  -"-
-		self.arrival		= 0	
+		self.callcount_per_opcode[:] 	= 0	#= np.zeros(3, dtype=int) 	# tracking 3 opcodes
+		self.opdurations[:, :] 			= 0	#= np.zeros((3, 4), dtype=float)	# tracking 3 opcodes, 4 statistics for each
+		self.xfer_per_opcode[:] 		= 0	#= np.zeros(3, dtype=float)	# 4 statistics for transfer sizes, tracking 3 opcodes
+		self.dtbounds[:, :] 			= 0		#=  np.zeros((3, 6), dtype=float)	#  -"-
+		self.arrival					= 0	
+		##
+		self.targetcount	= [{} for d in range(3)]
+		##
 
 	def set_from_dict(self, dict):
 		self.initialized	= 1
@@ -261,6 +267,14 @@ class epochSummary:
 			fs.forma_merge_stats_x4(self.dtbounds[opcode], other.dtbounds[opcode])
 			fs.forma_merge_stats_x4(self.opdurations[opcode], other.opdurations[opcode])
 
+			##
+			for key, value in other.targetcount[opcode].items():
+				if key in self.targetcount[opcode]:
+					self.targetcount[opcode][key] = self.targetcount[opcode][key] + value
+				else:
+					self.targetcount[opcode][key] = value
+			##
+
 		return self
 
 
@@ -291,7 +305,16 @@ class epochSummary:
 		print('------------------------------------------------------------------------------------------\n' +
 		'-------------------------- Data Transfer Bounds ------------------------------------------\n')
 		fp.forma_print_stats_x4(["MPI_Get", "MPI_Put", "MPI_Accumulate"], dtbounds_stats, 0)
-		
+	
+	
+		targetrank_stats = []
+		for i in range(len(self.targetcount)):
+			targetrank_stats.append(self)
+		print('------------------------------------------------------------------------------------------\n' +
+		'--------------------------------- Target Ranks -------------------------------------------\n')
+		fp.forma_print_stats_x2(["MPI_Get", "MPI_Put", "MPI_Accumulate"], dtbounds_stats, 0)
+	
+
 		return True
 
 
@@ -313,10 +336,10 @@ class windowSummary:
 		self.initialized	= 0
 		self.win_id			= 0
 		self.epoch_nr		= 0
-		self.callcount_per_opcode	= np.zeros(3, dtype=int) 	# tracking 3 opcodes
-		self.opdurations	= np.zeros((3, 4), dtype=float)	# tracking 3 opcodes, 4 statistics for each
-		self.xfer_per_opcode	= np.zeros(3, dtype=float)	# 4 statistics for transfer sizes, tracking 3 opcodes
-		self.dtbounds		= np.zeros((3, 6), dtype=float)	#  -"-
+		self.callcount_per_opcode[:] 	= 0 # = np.zeros(3, dtype=int) 	# tracking 3 opcodes
+		self.opdurations[:, :] 			= 0	# = np.zeros((3, 4), dtype=float)	# tracking 3 opcodes, 4 statistics for each
+		self.xfer_per_opcode[:]			= 0 # = np.zeros(3, dtype=float)	# 4 statistics for transfer sizes, tracking 3 opcodes
+		self.dtbounds[:, :]				= 0 # = np.zeros((3, 6), dtype=float)	#  -"-
 
 	def set_from_dict(self, dict):
 		self.initialized	= 1

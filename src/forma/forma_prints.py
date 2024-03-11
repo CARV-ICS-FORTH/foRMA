@@ -81,6 +81,20 @@ def forma_print_stats_x4(row_labels, row_data, mode):
 	return True
 
 
+def forma_print_stats_x2(row_labels, row_data, mode):
+
+	try:
+		rows = [[row_labels[i]]+row_data[i] for i in range(len(row_labels))]
+	except TypeError:
+		fl.forma_print('forma_print_stats_x2: check row_labels and row_data types')
+		sys.exit(2)
+
+	print(f'{tabulate(rows, headers=["aggregate", "min", "max", "avg"])}\n')
+
+	return True
+
+
+
 def forma_print_timestamps_ranks(row_data):
 
 	print(f'{tabulate([row_data], headers=["Epoch", "Earliest ts", "(rank)", "Latest ts", "(rank)", "Range"])}\n')
@@ -168,7 +182,11 @@ def forma_print_opduration_stats_for_epoch(opduration_stats_for_epoch):
 	return True
 
 
+def forma_print_targets_for_epoch(target_counts_for_epoch):
 
+	forma_print_stats_x2(["MPI_Get", "MPI_Put", "MPI_Accumulate"], target_counts_for_epoch)
+	
+	return True	
 
 
 
