@@ -200,7 +200,7 @@ class formaSummary:
 
 class epochSummary:
 
-	def __init__(self):
+	def __init__(self, total_ranks):
 
 		self.initialized	= 0
 		self.win_id			= 0
@@ -211,7 +211,7 @@ class epochSummary:
 		self.dtbounds		= np.zeros((3, 6), dtype=float)	#  -"-
 		self.arrival		= 0		# rank arrival to this fence
 		##
-		self.targetcount	= [{} for _ in range(3)]
+		self.targetcount	= np.zeros(total_ranks, dtype=int) 
 		##
 
 	def reset(self):
@@ -224,7 +224,7 @@ class epochSummary:
 		self.dtbounds[:, :] 			= 0		#=  np.zeros((3, 6), dtype=float)	#  -"-
 		self.arrival					= 0	
 		##
-		self.targetcount	= [{} for d in range(3)]
+		self.targetcount[:]	= 0
 		##
 
 	def set_from_dict(self, dict):
@@ -242,6 +242,9 @@ class epochSummary:
 		self.dtbounds[GET]		= dict["mpi_get_dtb"]
 		self.dtbounds[PUT]		= dict["mpi_put_dtb"]
 		self.dtbounds[ACC]		= dict["mpi_acc_dtb"]
+		##
+		self.targetcount		=dict["targetcount"]
+		##
 
 
 	def __iadd__(self, other):
@@ -267,13 +270,15 @@ class epochSummary:
 			fs.forma_merge_stats_x4(self.dtbounds[opcode], other.dtbounds[opcode])
 			fs.forma_merge_stats_x4(self.opdurations[opcode], other.opdurations[opcode])
 
-			##
-			for key, value in other.targetcount[opcode].items():
-				if key in self.targetcount[opcode]:
-					self.targetcount[opcode][key] = self.targetcount[opcode][key] + value
-				else:
-					self.targetcount[opcode][key] = value
-			##
+			# ##
+			# for key, value in other.targetcount[opcode].items():
+			# 	if key in self.targetcount[opcode]:
+			# 		self.targetcount[opcode][key] = self.targetcount[opcode][key] + value
+			# 	else:
+			# 		self.targetcount[opcode][key] = value
+			# ##
+
+		self.targetcount += other.targetcount
 
 		return self
 

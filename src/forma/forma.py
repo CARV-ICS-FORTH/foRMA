@@ -178,7 +178,7 @@ def main():
 
 		fl.forma_print('Preparing analysis of trace.')
 
-		exec_summary = fp.forma_parse_traces(tracefiles)
+		exec_summary = fp.forma_parse_traces(tracefiles, total_ranks)
 
 		total_callbacks = np.sum(exec_summary.callcount_per_opcode)
 		if total_callbacks == 0:

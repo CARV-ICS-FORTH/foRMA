@@ -45,16 +45,21 @@ import importlib.resources
 
 class FormaSTrace(DumpiTrace):
 
-	def __init__(self, file_name, rank): #, csv_filename, pickle_filename, parquet_filename):
+	def __init__(self, file_name, rank, total_ranks): #, csv_filename, pickle_filename, parquet_filename):
 		super().__init__(file_name)
 		
 		self.trace_summary = fc.formaSummary()
 		#self.trace_summary.setRanks(1)
 		
 		self.rankID = rank
+		self.total_ranks = total_ranks
 		self.wc_bias = 0
 		self.wc_bias_struct = dtypes.DumpiClock()
 		self.wc_offset = dtypes.DumpiClock()
+
+		##
+		self.targetcount =  np.zeros(total_ranks, dtype=int) 
+		##
 
 		## Window metrics are indexed by window ID but something strange is going on with 
 		## sst dumpi window id numbers, so I'm using a window id lookaside translation buffer
@@ -246,7 +251,8 @@ class FormaSTrace(DumpiTrace):
 				"tf_per_op": self.epoch_stats_for_win[win_id].xfer_per_opcode.tolist(), 
 				"mpi_get_dtb": self.epoch_stats_for_win[win_id].dtbounds[GET].tolist(), 
 				"mpi_put_dtb": self.epoch_stats_for_win[win_id].dtbounds[PUT].tolist(), 
-				"mpi_acc_dtb": self.epoch_stats_for_win[win_id].dtbounds[ACC].tolist()})
+				"mpi_acc_dtb": self.epoch_stats_for_win[win_id].dtbounds[ACC].tolist(),
+				"targetcount": self.targetcount.tolist()},)
 			#self.epoch_stats_for_win[win_id].reset()
 
 		else:
@@ -313,7 +319,7 @@ class FormaSTrace(DumpiTrace):
 		self.window_summaries.append(fc.windowSummary(data.size))
 		##
 
-		self.epoch_stats_for_win[win_id] = fc.epochSummary()
+		self.epoch_stats_for_win[win_id] = fc.epochSummary(self.total_ranks)
 
 		self.trace_summary.callcount_per_opcode[WIN_CR] += 1
 		self.trace_summary.wins += 1 
@@ -400,7 +406,8 @@ class FormaSTrace(DumpiTrace):
 								"tf_per_op": epochstats.xfer_per_opcode.tolist(), 
 								"mpi_get_dtb": epochstats.dtbounds[GET].tolist(), 
 								"mpi_put_dtb": epochstats.dtbounds[PUT].tolist(), 
-								"mpi_acc_dtb": epochstats.dtbounds[ACC].tolist()})
+								"mpi_acc_dtb": epochstats.dtbounds[ACC].tolist(),
+								"targetcount": self.targetcount.tolist()},)
 
 
 				#self.stashed_win_ids.discard(stashed_id)
@@ -452,6 +459,11 @@ class FormaSTrace(DumpiTrace):
 			self.epoch_stats_for_win[win_id].dtbounds[GET][AGR] += wall_time.start.to_ns()
 			##
 
+			print(f'incrementing count for target rank: {data.targetrank}')
+			self.targetcount[data.targetrank] += 1
+			print(f'target count is now: {self.targetcount}')
+
+
 		except Exception as e:
 			fl.forma_error('Unexpected error occurred: {e}')
 			exit(2)
@@ -481,6 +493,10 @@ class FormaSTrace(DumpiTrace):
 			self.epoch_stats_for_win[win_id].dtbounds[PUT][AGR] += wall_time.start.to_ns()
 			##
 
+			print(f'incrementing count for target rank: {data.targetrank}')
+			self.targetcount[data.targetrank] += 1
+			print(f'target count is now: {self.targetcount}')
+
 		except Exception as e:
 			fl.forma_error('Unexpected error occurred: {e}')
 			exit(2)
@@ -509,6 +525,9 @@ class FormaSTrace(DumpiTrace):
 			self.epoch_stats_for_win[win_id].dtbounds[ACC][AGR] += wall_time.start.to_ns()
 			##
 
+			print(f'incrementing count for target rank: {data.targetrank}')
+			self.targetcount[data.targetrank] += 1
+			print(f'target count is now: {self.targetcount}')
 
 		except Exception as e:
 			fl.forma_error('Unexpected error occurred: {e}')

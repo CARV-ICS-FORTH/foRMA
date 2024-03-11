@@ -14,6 +14,7 @@
  	{"name": "tf_per_op", "type": {"type": "array", "items": "float"}},
  	{"name": "mpi_get_dtb", "type": {"type": "array", "items": "float"}},
  	{"name": "mpi_put_dtb", "type": {"type": "array", "items": "float"}},
- 	{"name": "mpi_acc_dtb", "type": {"type": "array", "items": "float"}}
+ 	{"name": "mpi_acc_dtb", "type": {"type": "array", "items": "float"}},
+ 	{"name": "targetcount", "type": {"type": "array", "items": "int"}}
  ]
 }

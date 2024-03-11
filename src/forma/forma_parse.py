@@ -51,14 +51,14 @@ from avro.io import DatumReader, DatumWriter
 
 import importlib.resources
 
-def forma_parse_traces(tracefiles):
+def forma_parse_traces(tracefiles, total_ranks):
 
 
 	exec_summary = fc.formaSummary()
 	window_summaries = []
 
-	ranks = 0
-	wins = 0
+	# ranks = 0
+	# wins = 0
 	exec_time = 0
 
 	fl.forma_logger.debug('Inside forma parse traces.')
@@ -72,7 +72,7 @@ def forma_parse_traces(tracefiles):
 	writer = DataFileWriter(open(writerfile, "wb"), DatumWriter(), schema)
 
 	for rank, tracefile in enumerate(tracefiles):
-		with ft.FormaSTrace(tracefile, rank) as trace:
+		with ft.FormaSTrace(tracefile, rank, total_ranks) as trace:
 			fl.forma_print(f'Now parsing {tracefile}.\n')
 
 			# header = trace.read_header()
