@@ -312,12 +312,12 @@ class epochSummary:
 		fp.forma_print_stats_x4(["MPI_Get", "MPI_Put", "MPI_Accumulate"], dtbounds_stats, 0)
 	
 	
-		targetrank_stats = []
-		for i in range(len(self.targetcount)):
-			targetrank_stats.append(self)
-		print('------------------------------------------------------------------------------------------\n' +
-		'--------------------------------- Target Ranks -------------------------------------------\n')
-		fp.forma_print_stats_x2(["MPI_Get", "MPI_Put", "MPI_Accumulate"], dtbounds_stats, 0)
+		# targetrank_stats = []
+		# for i in range(len(self.targetcount)):
+		# 	targetrank_stats.append(self)
+		# print('------------------------------------------------------------------------------------------\n' +
+		# '--------------------------------- Target Ranks -------------------------------------------\n')
+		# fp.forma_print_stats_x2(["MPI_Get", "MPI_Put", "MPI_Accumulate"], dtbounds_stats, 0)
 	
 
 		return True

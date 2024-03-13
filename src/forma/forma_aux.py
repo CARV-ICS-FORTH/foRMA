@@ -206,6 +206,7 @@ def forma_aggregate_fence_arrivals(rank_nr):
 
 	epoch_count = -1
 	epoch_summary = fc.epochSummary(rank_nr)
+	targetcount_for_epoch = np.zeros(rank_nr, dtype=int) 
 	# schema = avro.schema.parse(open("../schemas/summary.avsc", "rb").read())
 	resource_string = importlib.resources.files('forma.schemas').joinpath('epochstats.avsc')
 	with importlib.resources.as_file(resource_string) as resource:
@@ -267,6 +268,11 @@ def forma_aggregate_fence_arrivals(rank_nr):
 				# aggregate_epoch_summary += epoch_summary
 				# aggregate_epoch_summary.set_averages()
 				arrivals[rank_id] = epoch_summary.arrival
+
+				##
+				targetcount_for_epoch += epoch_summary.targetcount
+				##
+
 				# print(f'Rank {rank_id} arrival from epoch summary: {epoch_summary.arrival}')
 				# print(f'Rank {rank_id} arrival: {arrivals[rank_id]}')
 				prev_rank_win = rank_win
@@ -288,6 +294,16 @@ def forma_aggregate_fence_arrivals(rank_nr):
 			first = np.min(arrivals)
 			last = np.max(arrivals)
 			print(f'First [ timestamp (rank) ]: {first} nsec ({np.argmin(arrivals)}) | Last [ timestamp (rank) ] : {last} nsec ({np.argmax(arrivals)}) | Difference: {(last-first)} nsec\n')
+
+			indexed_targetcounts = list(enumerate(targetcount_for_epoch))
+			sorted_targetcounts = sorted(indexed_targetcounts, key=lambda x: x[1], reverse=True)
+			targetcount_to_print = ', '.join([f'{index} ({value})' for index, value in sorted_targetcounts])
+			print(f'Targetrank count [ rank (count) ]: {targetcount_to_print}')
+
+			##
+			targetcount_for_epoch = np.zeros(rank_nr, dtype=int) 
+			##
+
 			prev_win = curr_win
 			#
 			# aggregate_epoch_summary.reset()
