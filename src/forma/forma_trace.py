@@ -459,9 +459,9 @@ class FormaSTrace(DumpiTrace):
 			self.epoch_stats_for_win[win_id].dtbounds[GET][AGR] += wall_time.start.to_ns()
 			##
 
-			print(f'incrementing count for target rank: {data.targetrank}')
+			#print(f'incrementing count for target rank: {data.targetrank}')
 			self.epoch_stats_for_win[win_id].targetcount[data.targetrank] += 1
-			print(f'target count is now: {self.epoch_stats_for_win[win_id].targetcount}')
+			#print(f'target count is now: {self.epoch_stats_for_win[win_id].targetcount}')
 
 
 		except Exception as e:
@@ -493,9 +493,9 @@ class FormaSTrace(DumpiTrace):
 			self.epoch_stats_for_win[win_id].dtbounds[PUT][AGR] += wall_time.start.to_ns()
 			##
 
-			print(f'incrementing count for target rank: {data.targetrank}')
+			#print(f'incrementing count for target rank: {data.targetrank}')
 			self.epoch_stats_for_win[win_id].targetcount[data.targetrank] += 1
-			print(f'target count is now: {self.epoch_stats_for_win[win_id].targetcount}')
+			#print(f'target count is now: {self.epoch_stats_for_win[win_id].targetcount}')
 
 		except Exception as e:
 			fl.forma_error('Unexpected error occurred: {e}')
@@ -525,9 +525,9 @@ class FormaSTrace(DumpiTrace):
 			self.epoch_stats_for_win[win_id].dtbounds[ACC][AGR] += wall_time.start.to_ns()
 			##
 
-			print(f'incrementing count for target rank: {data.targetrank}')
+			#print(f'incrementing count for target rank: {data.targetrank}')
 			self.epoch_stats_for_win[win_id].targetcount[data.targetrank] += 1
-			print(f'target count is now: {self.epoch_stats_for_win[win_id].targetcount}')
+			#print(f'target count is now: {self.epoch_stats_for_win[win_id].targetcount}')
 
 		except Exception as e:
 			fl.forma_error('Unexpected error occurred: {e}')
