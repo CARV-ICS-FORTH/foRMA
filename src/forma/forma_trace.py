@@ -58,7 +58,7 @@ class FormaSTrace(DumpiTrace):
 		self.wc_offset = dtypes.DumpiClock()
 
 		##
-		self.targetcount =  np.zeros(total_ranks, dtype=int) 
+		# self.targetcount =  np.zeros(total_ranks, dtype=int) 
 		##
 
 		## Window metrics are indexed by window ID but something strange is going on with 
@@ -252,7 +252,7 @@ class FormaSTrace(DumpiTrace):
 				"mpi_get_dtb": self.epoch_stats_for_win[win_id].dtbounds[GET].tolist(), 
 				"mpi_put_dtb": self.epoch_stats_for_win[win_id].dtbounds[PUT].tolist(), 
 				"mpi_acc_dtb": self.epoch_stats_for_win[win_id].dtbounds[ACC].tolist(),
-				"targetcount": self.targetcount.tolist()},)
+				"targetcount": self.epoch_stats_for_win[win_id].targetcount.tolist()},)
 			#self.epoch_stats_for_win[win_id].reset()
 
 		else:
@@ -285,7 +285,7 @@ class FormaSTrace(DumpiTrace):
 			# for epoch in epoch_stash_upd:
 			# 	epoch.print_summary()
 
-		self.epoch_stats_for_win[win_id].reset()
+		self.epoch_stats_for_win[win_id].reset(self.total_ranks)
 		#self.epoch_stats_for_win[win_id].win_id = win_id
 	
 
@@ -407,7 +407,7 @@ class FormaSTrace(DumpiTrace):
 								"mpi_get_dtb": epochstats.dtbounds[GET].tolist(), 
 								"mpi_put_dtb": epochstats.dtbounds[PUT].tolist(), 
 								"mpi_acc_dtb": epochstats.dtbounds[ACC].tolist(),
-								"targetcount": self.targetcount.tolist()},)
+								"targetcount": epochstats.targetcount.tolist()},)
 
 
 				#self.stashed_win_ids.discard(stashed_id)
@@ -460,8 +460,8 @@ class FormaSTrace(DumpiTrace):
 			##
 
 			print(f'incrementing count for target rank: {data.targetrank}')
-			self.targetcount[data.targetrank] += 1
-			print(f'target count is now: {self.targetcount}')
+			self.epoch_stats_for_win[win_id].targetcount[data.targetrank] += 1
+			print(f'target count is now: {self.epoch_stats_for_win[win_id].targetcount}')
 
 
 		except Exception as e:
@@ -494,8 +494,8 @@ class FormaSTrace(DumpiTrace):
 			##
 
 			print(f'incrementing count for target rank: {data.targetrank}')
-			self.targetcount[data.targetrank] += 1
-			print(f'target count is now: {self.targetcount}')
+			self.epoch_stats_for_win[win_id].targetcount[data.targetrank] += 1
+			print(f'target count is now: {self.epoch_stats_for_win[win_id].targetcount}')
 
 		except Exception as e:
 			fl.forma_error('Unexpected error occurred: {e}')
@@ -526,8 +526,8 @@ class FormaSTrace(DumpiTrace):
 			##
 
 			print(f'incrementing count for target rank: {data.targetrank}')
-			self.targetcount[data.targetrank] += 1
-			print(f'target count is now: {self.targetcount}')
+			self.epoch_stats_for_win[win_id].targetcount[data.targetrank] += 1
+			print(f'target count is now: {self.epoch_stats_for_win[win_id].targetcount}')
 
 		except Exception as e:
 			fl.forma_error('Unexpected error occurred: {e}')

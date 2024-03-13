@@ -214,17 +214,17 @@ class epochSummary:
 		self.targetcount	= np.zeros(total_ranks, dtype=int) 
 		##
 
-	def reset(self):
+	def reset(self, total_ranks):
 		self.initialized	= 0
 		self.win_id			= 0
 		self.epoch_nr		= 0
-		self.callcount_per_opcode[:] 	= 0	#= np.zeros(3, dtype=int) 	# tracking 3 opcodes
-		self.opdurations[:, :] 			= 0	#= np.zeros((3, 4), dtype=float)	# tracking 3 opcodes, 4 statistics for each
-		self.xfer_per_opcode[:] 		= 0	#= np.zeros(3, dtype=float)	# 4 statistics for transfer sizes, tracking 3 opcodes
-		self.dtbounds[:, :] 			= 0		#=  np.zeros((3, 6), dtype=float)	#  -"-
-		self.arrival					= 0	
+		self.callcount_per_opcode 	= np.zeros(3, dtype=int) 	# tracking 3 opcodes
+		self.opdurations 			= np.zeros((3, 4), dtype=float)	# tracking 3 opcodes, 4 statistics for each
+		self.xfer_per_opcode 		= np.zeros(3, dtype=float)	# 4 statistics for transfer sizes, tracking 3 opcodes
+		self.dtbounds 			=  np.zeros((3, 6), dtype=float)	#  -"-
+		self.arrival			= 0	
 		##
-		self.targetcount[:]	= 0
+		self.targetcount		= np.zeros(total_ranks, dtype=int) 
 		##
 
 	def set_from_dict(self, dict):
@@ -341,10 +341,10 @@ class windowSummary:
 		self.initialized	= 0
 		self.win_id			= 0
 		self.epoch_nr		= 0
-		self.callcount_per_opcode[:] 	= 0 # = np.zeros(3, dtype=int) 	# tracking 3 opcodes
-		self.opdurations[:, :] 			= 0	# = np.zeros((3, 4), dtype=float)	# tracking 3 opcodes, 4 statistics for each
-		self.xfer_per_opcode[:]			= 0 # = np.zeros(3, dtype=float)	# 4 statistics for transfer sizes, tracking 3 opcodes
-		self.dtbounds[:, :]				= 0 # = np.zeros((3, 6), dtype=float)	#  -"-
+		self.callcount_per_opcode = np.zeros(3, dtype=int) 	# tracking 3 opcodes
+		self.opdurations = np.zeros((3, 4), dtype=float)	# tracking 3 opcodes, 4 statistics for each
+		self.xfer_per_opcode = np.zeros(3, dtype=float)	# 4 statistics for transfer sizes, tracking 3 opcodes
+		self.dtbounds = 0 # = np.zeros((3, 6), dtype=float)	#  -"-
 
 	def set_from_dict(self, dict):
 		self.initialized	= 1
