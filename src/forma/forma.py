@@ -78,6 +78,7 @@ def main():
 	forma_arg_parse.add_argument("timestamp", help="Specifies the timestamp that makes up the filenames of the tracefiles to be parsed.", type=str)
 	forma_arg_parse.add_argument("-d", "--debug", help="Turns on debug messages and is meant to be used for developing the tool and not when using it to profile traces.",
                     action="store_true")
+	forma_arg_parse.add_argument("-o", "--oneoff", help="When specified, foRMA only produces a summary of statistics and any eventual extra oprtions specified and exits without offering the interactive prompt.", action="store_true")
 	forma_arg_parse.add_argument("-s", "--summary", help="When specified, foRMA only produces a summary of statistics and exits without offering the interactive prompt.", action="store_true")
 	forma_arg_parse.add_argument("-t", "--transfers", help="When specified, foRMA also produces a summary of data transfer bounds statistics while parsing the tracefiles.", action="store_true")
 	forma_arg_parse.add_argument("-a", "--all", help="Produce full analysis broken down per ranks and per windows, output to files epochs.txt, fences.txt, and calls.txt in directory forma_out/. Equivalent to -c -e -f.", action="store_true")
@@ -92,11 +93,22 @@ def main():
 	args = forma_arg_parse.parse_args()
 	dirname = args.directory
 	timestamp = args.timestamp
-	cmdln_mode = args.summary
+	cmdln_mode = args.summary or args.oneoff
 	# dt_summary = args.transfers
 	fg.transfers = args.transfers
 	go_meta = args.meta
 	hosts = args.rh
+
+	options = []
+	if args.all:
+		options.append('a')
+	else:
+		if args.calls:
+			options.append('c')
+		if args.epochs:
+			options.append('e')
+		if args.fences:
+			options.append('f')
 
 
 	fl.forma_intro()
@@ -223,6 +235,7 @@ def main():
 
 
 ################ Stage-independent #########################################
+
 	
 	while action != 'q':
 		if (not cmdln_mode):
@@ -242,23 +255,23 @@ def main():
 		if action == 'q':
 			sys.exit()
 		elif action == 'e': #
-			fl.forma_print('Preparing results...')
+			fl.forma_print('Preparing results for \'e\' option...')
 			#err = fa.forma_aggregate_epoch_files(exec_summary.ranks)
 			err = fa.forma_aggregate_epoch_files(total_ranks)
 			if err == 2:
 				fl.forma_error('Window ID discrepancy among files. Make sure you are using well-formatted SST Dumpi output files.')
 				sys.exit(2)
-			fl.forma_print('Statistics per epoch (fence-based synchronization) can be found in file forma_out/epochs.txt\n')
+			fl.forma_print(f'Statistics per epoch (fence-based synchronization) can be found in file forma_out/{timestamp}/epochs.txt\n')
 		elif action == 'f':
-			fl.forma_print('Preparing results...')
+			fl.forma_print('Preparing results for \'f\' option...')
 			#err = fa.forma_aggregate_fence_arrivals(exec_summary.ranks)
 			err = fa.forma_aggregate_fence_arrivals(total_ranks)
 			if err == 2:
 			 	fl.forma_error('Window ID discrepancy among files. Make sure you are using well-formatted SST Dumpi output files.')
 			 	sys.exit(2)
-			fl.forma_print('Fence statistics can be found in file forma_out/fences.txt.\n')
+			fl.forma_print(f'Fence statistics can be found in file forma_out/{timestamp}/fences.txt.\n')
 		elif action == 'c':
-			fl.forma_print('Preparing results...')
+			fl.forma_print('Preparing results for \'c\' option...')
 			rank_summary = fc.formaSummary()
 			#schema = avro.schema.parse(open("../schemas/summary.avsc", "rb").read())
 			resource_string = importlib.resources.files('forma.schemas').joinpath('summary.avsc')
@@ -275,7 +288,7 @@ def main():
 					rank_summary.print_summary()
 				reader.close()
 			sys.stdout = original_stdout # Reset the standard output to its original value
-			fl.forma_print('Time spent in calls (per rank), as well as data transfer bounds, can be found in file forma_out/calls.txt\n')
+			fl.forma_print(f'Time spent in calls (per rank), as well as data transfer bounds, can be found in file forma_out/{timestamp}/calls.txt\n')
 		elif action == 'r':
 			try:
 				#rank_id = int(input(f'Please select rank ID [0 - {exec_summary.ranks-1}]: '))
@@ -304,7 +317,7 @@ def main():
 					rank_summary.print_summary()
 			reader.close()
 		elif action == 'a':
-			fl.forma_print('Preparing results...')
+			fl.forma_print('Preparing results for \'a\' option...')
 			original_stdout = sys.stdout # Save a reference to the original standard output
 
 			rank_summary = fc.formaSummary()
@@ -313,9 +326,11 @@ def main():
 			with importlib.resources.as_file(resource_string) as resource:
 				schema = avro.schema.parse(open(resource, "rb").read())
 			reader = DataFileReader(open("forma_meta/"+format(str(timestamp))+"/rank_summaries.avro", "rb"), DatumReader(schema))
+
 			with open("forma_out/"+format(str(timestamp))+"/calls.txt", 'w') as f:
 				sys.stdout = f # Change the standard output to the file we created.
 				for rid, summary in enumerate(reader):
+					print(f'------------------------------------ RANK {rid} ---------------------------------------------')
 					rank_summary.set_from_dict(summary)
 					rank_summary.print_summary()
 				reader.close()
@@ -323,7 +338,7 @@ def main():
 			with open("forma_out/"+format(str(timestamp))+"/epochs.txt", 'w') as f:
 				sys.stdout = f # Change the standard output to the file we created.
 
-				epoch_summary = fc.epochSummary()
+				epoch_summary = fc.epochSummary(total_ranks)
 				# schema = avro.schema.parse(open("../schemas/summary.avsc", "rb").read())
 				resource_string = importlib.resources.files('forma.schemas').joinpath('summary.avsc')
 				with importlib.resources.as_file(resource_string) as resource:
@@ -345,7 +360,7 @@ def main():
 				
 			sys.stdout = original_stdout # Reset the standard output to its original value
 			#fl.forma_print('Full analysis broken down per ranks and per windows can be found in files epochs.txt, fences.txt, and calls.txt\n')
-			fl.forma_print('Full analysis broken down per ranks and per windows can be found in files epochs.txt and calls.txt in directory forma_out/\n')
+			fl.forma_print(f'Full analysis broken down per ranks and per windows can be found in files epochs.txt, fences.txt and calls.txt in directory forma_out/{timestamp}/\n')
 		elif action == 'h':
 			hostfile = fg.outdir+"hosts.txt"
 			if not os.path.exists(hostfile):
@@ -362,7 +377,11 @@ def main():
 			action = 'r'
 
 		if cmdln_mode:
-			sys.exit()
+			if args.oneoff:
+				if options != []:
+					action = options.pop()
+				else:
+					sys.exit()
 	
 
 
