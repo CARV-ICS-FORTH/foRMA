@@ -297,7 +297,7 @@ def forma_aggregate_fence_arrivals(rank_nr):
 
 			indexed_targetcounts = list(enumerate(targetcount_for_epoch))
 			sorted_targetcounts = sorted(indexed_targetcounts, key=lambda x: x[1], reverse=True)
-			targetcount_to_print = ', '.join([f'{index} ({value})' for index, value in sorted_targetcounts])
+			targetcount_to_print = ', '.join([f'{index} ({value})' for index, value in sorted_targetcounts if value != 0])
 			print(f'Targetrank count [ rank (count) ]: {targetcount_to_print}')
 
 			##
