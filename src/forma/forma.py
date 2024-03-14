@@ -335,30 +335,44 @@ def main():
 					rank_summary.print_summary()
 				reader.close()
 
-			with open("forma_out/"+format(str(timestamp))+"/epochs.txt", 'w') as f:
-				sys.stdout = f # Change the standard output to the file we created.
+			# with open("forma_out/"+format(str(timestamp))+"/epochs.txt", 'w') as f:
+			# 	sys.stdout = f # Change the standard output to the file we created.
 
-				epoch_summary = fc.epochSummary(total_ranks)
-				# schema = avro.schema.parse(open("../schemas/summary.avsc", "rb").read())
-				resource_string = importlib.resources.files('forma.schemas').joinpath('summary.avsc')
-				with importlib.resources.as_file(resource_string) as resource:
-					schema = avro.schema.parse(open(resource, "rb").read())
-				#for rank_id in range(0, exec_summary.ranks):
-				for rank_id in range(0, total_ranks):
-					epochsumfile = "./forma_meta/"+format(str(timestamp))+"/epochs-"+str(rank_id)+".avro"
-					reader = DataFileReader(open(epochsumfile, "rb"), DatumReader(schema))
-					for rid, summary in enumerate(reader):
-						epoch_summary.set_from_dict(summary)
-						epoch_summary.print_summary()
-					reader.close()
-				#fa.forma_aggregate_epoch_files(exec_summary.ranks)
-				fa.forma_aggregate_epoch_files(total_ranks)
+			# 	epoch_summary = fc.epochSummary(total_ranks)
+			# 	# schema = avro.schema.parse(open("../schemas/summary.avsc", "rb").read())
+			# 	resource_string = importlib.resources.files('forma.schemas').joinpath('summary.avsc')
+			# 	with importlib.resources.as_file(resource_string) as resource:
+			# 		schema = avro.schema.parse(open(resource, "rb").read())
+			# 	#for rank_id in range(0, exec_summary.ranks):
+			# 	for rank_id in range(0, total_ranks):
+			# 		epochsumfile = "./forma_meta/"+format(str(timestamp))+"/epochs-"+str(rank_id)+".avro"
+			# 		reader = DataFileReader(open(epochsumfile, "rb"), DatumReader(schema))
+			# 		for rid, summary in enumerate(reader):
+			# 			epoch_summary.set_from_dict(summary)
+			# 			epoch_summary.print_summary()
+			# 		reader.close()
+			# 	#fa.forma_aggregate_epoch_files(exec_summary.ranks)
+			# 	fa.forma_aggregate_epoch_files(total_ranks)
 
 
-			with open("forma_out/"+format(str(timestamp))+"/fences.txt", 'w') as f:
-				sys.stdout = f # Change the standard output to the file we created.
+			# with open("forma_out/"+format(str(timestamp))+"/fences.txt", 'w') as f:
+			# 	sys.stdout = f # Change the standard output to the file we created.
 				
 			sys.stdout = original_stdout # Reset the standard output to its original value
+
+
+			# 'e' option
+			err = fa.forma_aggregate_epoch_files(total_ranks)
+			if err == 2:
+				fl.forma_error('Window ID discrepancy among files. Make sure you are using well-formatted SST Dumpi output files.')
+				sys.exit(2)
+
+			# 'f' option'
+			err = fa.forma_aggregate_fence_arrivals(total_ranks)
+			if err == 2:
+			 	fl.forma_error('Window ID discrepancy among files. Make sure you are using well-formatted SST Dumpi output files.')
+			 	sys.exit(2)
+
 			#fl.forma_print('Full analysis broken down per ranks and per windows can be found in files epochs.txt, fences.txt, and calls.txt\n')
 			fl.forma_print(f'Full analysis broken down per ranks and per windows can be found in files epochs.txt, fences.txt and calls.txt in directory forma_out/{timestamp}/\n')
 		elif action == 'h':
