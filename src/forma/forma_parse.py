@@ -159,10 +159,10 @@ def forma_parse_traces(tracefiles, total_ranks):
 	indexed_biases = list(enumerate(biases))
 	sorted_biases = sorted(indexed_biases, key=lambda x: x[1])
 	biases_to_print = '\n'.join([f'{index} ({value})' for index, value in sorted_biases if value != 0])
-	
+
 	original_stdout = sys.stdout # Save a reference to the original standard output
 	biasfile = fg.outdir+"biases.txt"
-	with open(timefile, 'w') as f:
+	with open(biasfile, 'w') as f:
 		sys.stdout = f # Change the standard output to the file we created.
 		print(f'Ranks sorted by bias [ rank (bias in sec) ]\n{biases_to_print}')
 	sys.stdout = original_stdout # Reset the standard output to its original value
