@@ -91,10 +91,10 @@ def check_filepaths(dirname, timestamp):
 	return(ordered_files, len(ordered_files))
 
 
-def rank_to_host(tracefiles):
+def rank_to_host(tracefiles, total_ranks):
 
 	for rank, tracefile in enumerate(tracefiles):
-		with ft.FormaSTrace(tracefile, rank) as trace:
+		with ft.FormaSTrace(tracefile, rank, total_ranks) as trace:
 			header = trace.read_header().hostname.decode('utf-8')
 			print(f'Rank {rank}: {header}')
 

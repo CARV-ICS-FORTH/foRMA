@@ -61,6 +61,8 @@ class FormaSTrace(DumpiTrace):
 		# self.targetcount =  np.zeros(total_ranks, dtype=int) 
 		##
 
+
+
 		## Window metrics are indexed by window ID but something strange is going on with 
 		## sst dumpi window id numbers, so I'm using a window id lookaside translation buffer
 		self.win_count = 0
@@ -124,10 +126,21 @@ class FormaSTrace(DumpiTrace):
 			# print(f'Profile info: {dir(self._profile.contents)}')
 			# print(f'Wall time offset: {self._profile.contents.wall_time_offset}')
 			self.wc_bias = self._profile.contents.wall_time_offset
-			# print(f'bias: {self.wc_bias}')
-			self.wc_bias_struct.sec = self.wc_bias
-			print(f'bias to ns: {self.wc_bias_struct.to_ns()}')
-			print(f'init bias a.k.a offset: {wall_time.stop.to_ns()}')
+			# print(f'profile bias: {self.wc_bias}')
+			# self.wc_bias_struct.sec = self.wc_bias
+			# print(f'bias to ns: {self.wc_bias_struct.to_ns()}')
+			# print(f'init bias a.k.a offset: {wall_time.stop.to_ns()}')
+
+			ranktimeline = "Rank "+str(self.rankID)+": Bias = "+str(self._profile.contents.wall_time_offset)+"; Init = "+str(wall_time.stop.to_ns())+"\n"
+
+			inittimefilename = fg.outdir+"times.txt"
+			#if not os.path.exists(inittimefilename):
+			if self.rankID == 0:
+				with open(inittimefilename, 'w') as file:
+					file.write(ranktimeline)
+			else:
+				with open(inittimefilename, 'a') as file:
+					file.write(ranktimeline)
 
 
 	def on_finalize(self, data, thread, cpu_time, wall_time, perf_info):
@@ -169,6 +182,10 @@ class FormaSTrace(DumpiTrace):
 					#print(f'printing average! >>> {self.trace_summary.dtbounds[opcode][AVG]}')
 
 		self.writer.close()
+
+
+		self.wc_bias_struct.sec = self.wc_bias
+		self.wc_offset = self.wc_offset - self.wc_bias_struct.to_ns()
 
 
 	def on_win_fence(self, data, thread, cpu_time, wall_time, perf_info):

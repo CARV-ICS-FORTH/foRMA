@@ -61,6 +61,9 @@ def forma_parse_traces(tracefiles, total_ranks):
 	# wins = 0
 	exec_time = 0
 
+	biases = []
+	inits = []
+
 	fl.forma_logger.debug('Inside forma parse traces.')
 
 	# schema = avro.schema.parse(open("schemas/summary.avsc", "rb").read())
@@ -113,6 +116,10 @@ def forma_parse_traces(tracefiles, total_ranks):
 			
 			exec_summary += trace.trace_summary
 
+			biases.append(trace.wc_bias)
+			inits.append(trace.wc_offset)
+
+
 			for i, winsum in enumerate(trace.window_summaries):
 				if len(window_summaries) < trace.trace_summary.wins:
 					window_summaries.append(winsum)
@@ -135,8 +142,30 @@ def forma_parse_traces(tracefiles, total_ranks):
 			winsum.set_averages()
 			winsum.print_summary()
 	sys.stdout = original_stdout # Reset the standard output to its original value
+
+
+	indexed_inits = list(enumerate(inits))
+	sorted_inits = sorted(indexed_inits, key=lambda x: x[1])
+	inits_to_print = '\n'.join([f'{index} ({value})' for index, value in sorted_inits if value != 0])
+
+	original_stdout = sys.stdout # Save a reference to the original standard output
+	timefile = fg.outdir+"times.txt"
+	with open(timefile, 'w') as f:
+		sys.stdout = f # Change the standard output to the file we created.
+		print(f'Ranks sorted by init offset [ rank (offset in ns) ]\n{inits_to_print}')
+	sys.stdout = original_stdout # Reset the standard output to its original value
 	
 
+	indexed_biases = list(enumerate(biases))
+	sorted_biases = sorted(indexed_biases, key=lambda x: x[1])
+	biases_to_print = '\n'.join([f'{index} ({value})' for index, value in sorted_biases if value != 0])
+	
+	original_stdout = sys.stdout # Save a reference to the original standard output
+	biasfile = fg.outdir+"biases.txt"
+	with open(timefile, 'w') as f:
+		sys.stdout = f # Change the standard output to the file we created.
+		print(f'Ranks sorted by bias [ rank (bias in sec) ]\n{biases_to_print}')
+	sys.stdout = original_stdout # Reset the standard output to its original value
 
 	# reader = DataFileReader(open("rank_summaries.avro", "rb"), DatumReader())
 	# for summary in reader:

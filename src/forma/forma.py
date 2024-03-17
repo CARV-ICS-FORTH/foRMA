@@ -80,7 +80,8 @@ def main():
                     action="store_true")
 	forma_arg_parse.add_argument("-o", "--oneoff", help="When specified, foRMA only produces a summary of statistics and any eventual extra oprtions specified and exits without offering the interactive prompt.", action="store_true")
 	forma_arg_parse.add_argument("-s", "--summary", help="When specified, foRMA only produces a summary of statistics and exits without offering the interactive prompt.", action="store_true")
-	forma_arg_parse.add_argument("-t", "--transfers", help="When specified, foRMA also produces a summary of data transfer bounds statistics while parsing the tracefiles.", action="store_true")
+	#forma_arg_parse.add_argument("-t", "--transfers", help="When specified, foRMA also produces a summary of data transfer bounds statistics while parsing the tracefiles.", action="store_true")
+	forma_arg_parse.add_argument("-t", "--times", help="When specified, foRMA outputs rank starting times in order of magnitude from first to last init.", action="store_true")
 	forma_arg_parse.add_argument("-a", "--all", help="Produce full analysis broken down per ranks and per windows, output to files epochs.txt, fences.txt, and calls.txt in directory forma_out/. Equivalent to -c -e -f.", action="store_true")
 	forma_arg_parse.add_argument("-c", "--calls", help="Output time spent in calls (per rank), as well as data transfer bounds, in file forma_out/calls.txt.", action="store_true")
 	forma_arg_parse.add_argument("-e", "--epochs", help="Produce statistics per epoch (fence-based synchronization), output to file forma_out/epochs.txt", action="store_true")
@@ -95,7 +96,7 @@ def main():
 	timestamp = args.timestamp
 	cmdln_mode = args.summary or args.oneoff
 	# dt_summary = args.transfers
-	fg.transfers = args.transfers
+	#fg.transfers = args.transfers
 	go_meta = args.meta
 	hosts = args.rh
 
@@ -109,6 +110,8 @@ def main():
 			options.append('e')
 		if args.fences:
 			options.append('f')
+	if args.times:
+		options.append('t')
 
 
 	fl.forma_intro()
@@ -166,7 +169,7 @@ def main():
 
 			original_stdout = sys.stdout
 			sys.stdout = file
-			fa.rank_to_host(tracefiles)
+			fa.rank_to_host(tracefiles, total_ranks)
 			sys.stdout = original_stdout
 
 
@@ -378,11 +381,49 @@ def main():
 		elif action == 'h':
 			hostfile = fg.outdir+"hosts.txt"
 			if not os.path.exists(hostfile):
-				fa.rank_to_host(tracefiles)
+				fa.rank_to_host(tracefiles, total_ranks)
 			else:
 				with open(hostfile, 'r') as file:
 					ranks_to_hosts = file.read()
 					print(ranks_to_hosts)
+
+		# elif action == 't':
+		# 	timefile = fg.outdir+"times.txt"
+		# 	biases = np.zeros(total_ranks)
+		# 	inits = np.zeros(total_ranks)
+
+		# 	if not os.path.exists(timefile):
+		# 		fl.forma_print('Required file not found. If you have used the -m option, try re-running the trace file parsing.')
+		# 		continue
+		# 	else:
+		# 		with open(timefile, 'r') as file:
+		# 			for line_number, line in enumerate(file, start=1):
+		# 				parts = line.split(';')
+		# 				numbers = [int(part.split('=')[1].strip()) for part in parts]
+		# 				biases[line_number-1] = numbers[0]
+		# 				inits[line_number-1] = numbers[1]
+
+		# 	# Find the maximum value and its index
+		# 	max_bias_value = np.amax(biases)
+		# 	max_bias_index = np.argmax(biases)
+
+		# 	max_init_value = np.amax(inits)
+		# 	max_init_index = np.argmax(inits)
+
+
+		# 	# Find the minimum value and its index
+		# 	min_bias_value = np.amin(biases)
+		# 	min_bias_index = np.argmin(biases)
+
+		# 	min_init_value = np.amin(inits)
+		# 	min_init_index = np.argmin(inits)
+
+		# 	print(f'First rank time bias:\trank {min_bias_index} - {min_bias_value}.')
+		# 	print(f'Last rank time bias:\trank {max_bias_index} - {max_bias_value}.')
+
+		# 	print(f'First rank to exit init() is rank {min_init_index} at {min_init_value} nanoseconds.')
+		# 	print(f'Last rank to exit init() is rank {max_init_index} at {max_init_value} nanoseconds.')
+
 
 		elif action == 'p':
 			pass
